@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>moth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#282C34;--bg1:#21252B;--bg2:#21252B;--bg3:#2C313C;
+  --border:rgba(171,178,191,0.14);--border2:rgba(171,178,191,0.24);--border3:rgba(171,178,191,0.36);
+  --text:#abb2bf;--text2:#98a1b3;--text3:#6b7485;
+  --cyan:#61AFEF;--cyan2:#528BFF;
+  --lav:#F2A7D8;--caret:#528BFF;
+  --green:#98C379;--amber:#E5C07B;--red:#E06C75;
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+button,input,textarea{font-family:inherit}
+button{appearance:none;background:none;border:none}
+code,pre{font-family:var(--mono)}
+
+.home,.app{position:absolute;inset:0}
+.home{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.home.hide{display:none}
+.logo{font:500 12px var(--mono);color:var(--cyan);letter-spacing:.08em;margin-bottom:28px}
+.home h1{font-size:34px;letter-spacing:-.03em;text-align:center;line-height:1.2;margin-bottom:12px}
+.home h1 span{color:var(--cyan)}
+.home p{color:var(--text2);font-size:14px;line-height:1.6;text-align:center;max-width:480px;margin-bottom:16px}
+.card{width:100%;max-width:560px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;overflow:hidden}
+.cardtop{padding:16px}
+.clabel{font:500 10px var(--mono);color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+#hwInput{width:100%;min-height:110px;background:transparent;border:none;outline:none;color:var(--text);line-height:1.6;font-size:14px;resize:none}
+#hwInput::placeholder{color:var(--text3)}
+.cardbot{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);background:var(--bg1)}
+.hint{font-size:11px;color:var(--text3)}
+.start{background:var(--cyan);color:#0d1117;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer}
+.start:hover{background:var(--cyan2)}
+.loading{display:none;align-items:center;gap:10px;margin-top:12px;color:var(--text2);font-size:12px}
+.loading.show{display:flex}
+.spin{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--cyan);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.app{display:none;flex-direction:column}
+.app.show{display:flex}
+.topbar{height:42px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 10px;gap:12px}
+.left{display:flex;align-items:center;gap:10px;min-width:0}
+.toplogo{font:500 11px var(--mono);color:var(--cyan);cursor:pointer}
+.session{font:11px var(--mono);color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.right{display:flex;align-items:center;gap:8px}
+.sizelbl{font:10px var(--mono);color:var(--text3)}
+#fontSlider{width:72px}
+.topbtn{height:28px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);padding:0 10px;border-radius:7px;font-size:12px;cursor:pointer}
+.topbtn:hover{border-color:var(--border3);color:var(--text)}
+.topbtn.copied{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.45);color:var(--green)}
+
+.layout{position:relative;display:grid;grid-template-columns:1fr 4px var(--sw,268px);height:calc(100vh - 42px)}
+.ecol{min-width:0;display:flex;flex-direction:column}
+.tabs{height:36px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 10px;gap:14px;overflow:auto}
+.ptab{height:35px;display:flex;align-items:center;padding:0 2px;border-bottom:2px solid transparent;color:var(--text2);font:12px var(--mono);cursor:pointer;white-space:nowrap;background:transparent}
+.ptab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+
+.editorwrap{flex:1;display:grid;grid-template-columns:52px 1fr;min-height:0}
+.gutter{background:var(--bg1);border-right:1px solid var(--border);padding:10px 8px;font:12px/1.75 var(--mono);color:var(--text3);text-align:right;user-select:none;overflow:hidden;white-space:pre}
+.editorPane{position:relative;min-height:0;background:var(--bg)}
+#currentLine{position:absolute;left:0;right:0;height:21px;background:#2C313C;pointer-events:none;z-index:0}
+#editorHl,#editor{position:absolute;inset:0;width:100%;height:100%;padding:10px 12px 40vh 12px;border:none;outline:none;resize:none;overflow:auto;white-space:pre;tab-size:4;font:12px/1.75 var(--mono)}
+#editorHl{pointer-events:none;user-select:none;-webkit-user-select:none;color:var(--lav);z-index:1}
+#editor{background:transparent;color:transparent !important;-webkit-text-fill-color:transparent !important;caret-color:var(--caret);z-index:2}
+#editor::selection{background:rgba(62,68,81,.45)}
+#fbFloat{
+  position:absolute;
+  z-index:4;
+  pointer-events:auto;
+  max-width:none;
+  min-width:220px;
+  padding:0;
+  border-radius:10px;
+  border:1px solid var(--border2);
+  background:rgba(33,37,43,.92);
+  box-shadow:0 8px 22px rgba(0,0,0,.28);
+  font-size:15px;
+  line-height:1.5;
+  color:var(--text);
+  white-space:normal;
+  word-break:break-word;
+  opacity:1;
+  transform:translateY(4px);
+  transition:opacity .12s ease, transform .12s ease;
+  resize:both;
+  overflow:auto;
+  min-height:90px;
+}
+#fbFloat.show{opacity:1;transform:translateY(0)}
+#fbFloat.ok{border-color:rgba(152,195,121,.55)}
+#fbFloat.warn{border-color:rgba(229,192,123,.55)}
+#fbFloat.info{border-color:rgba(97,175,239,.55)}
+#fbFloat.err{border-color:rgba(224,108,117,.55)}
+#fbFloatHead{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 10px;border-bottom:1px solid var(--border);
+  background:rgba(44,49,60,.92);font:11px var(--mono);color:var(--text2);cursor:move;
+}
+#fbFloatBody{padding:10px 12px;font-size:15px;line-height:1.5}
+
+/* Pastel syntax colors */
+.t-com{color:#5c6370}
+.t-str{color:#98c379}
+.t-kw{color:#E06C75}
+.t-bi{color:#56B6C2}
+.t-num{color:#d19a66}
+.t-fn{color:#61afef}
+.t-typ{color:#E5C07B}
+
+.feedback{min-height:56px;border-top:1px solid var(--border);background:var(--bg1);display:flex;align-items:flex-start;gap:10px;padding:10px 14px;font-size:14px;color:var(--text2)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--text3);flex:0 0 auto;margin-top:5px}
+#fbmsg{line-height:1.5;white-space:normal;word-break:break-word;max-width:100%}
+.chips{min-height:38px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:8px 10px;overflow:auto;background:var(--bg)}
+.chip{padding:4px 9px;border-radius:999px;border:1px solid var(--border2);font:11px var(--mono);white-space:nowrap;color:var(--text3);background:var(--bg1)}
+.chip.done{color:var(--green);border-color:rgba(52,211,153,.45);background:rgba(52,211,153,.12)}
+.chip.next{color:var(--cyan);border-color:rgba(56,189,248,.45);background:rgba(56,189,248,.12)}
+
+.handle{position:relative;background:var(--border);cursor:col-resize}
+.handle:hover{background:var(--border3)}
+.cbtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);font:12px var(--mono);cursor:pointer;z-index:5}
+
+.rcol{position:relative;border-left:1px solid var(--border);background:var(--bg1);min-width:0}
+.rtabs{height:34px;display:flex;align-items:center;gap:8px;padding:0 8px;border-bottom:1px solid var(--border);overflow:auto}
+.rtab{font:10px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text3);cursor:pointer;padding:6px 8px;border-radius:6px;white-space:nowrap;background:transparent}
+.rtab.on{background:rgba(56,189,248,.12);color:var(--cyan)}
+.rpanel{position:absolute;inset:34px 0 0 0;padding:10px;overflow:auto;display:none}
+.rpanel.on{display:block}
+.cardx{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px}
+.cardx h4{font:500 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.cardx p,.cardx li{font-size:12px;color:var(--text2);line-height:1.6}
+.cardx code{font-family:var(--mono);color:var(--cyan);font-size:11px}
+.warn{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.35)}
+.tip{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.35)}
+.rpanel pre{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px;overflow:auto;margin-top:6px;color:var(--text);font:11px/1.55 var(--mono)}
+.swcard{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px}
+.swnum{font:500 9px var(--mono);color:var(--text3);letter-spacing:.09em;text-transform:uppercase;margin-bottom:4px}
+.swlabel{font:500 11px var(--mono);color:var(--cyan);margin-bottom:6px}
+.swbody{font-size:12px;color:var(--text2);line-height:1.6}
+.swbody p{margin-bottom:6px}
+
+.collapsed{grid-template-columns:1fr 4px 0px}
+.collapsed .rcol{display:none}
+</style>
+</head>
+<body>
+<div class="home" id="home">
+  <div class="logo">moth/</div>
+  <h1>paste your <span>homework.</span><br/>i'll handle the rest.</h1>
+  <p>paste any assignment prompt or problem set. moth will split it into problems and coach you checkpoint by checkpoint.</p>
+  <div class="card">
+    <div class="cardtop">
+      <div class="clabel">paste homework here</div>
+      <textarea id="hwInput" placeholder="paste your full homework prompt, problem set, or topic..."></textarea>
+    </div>
+    <div class="cardbot">
+      <div class="hint">Cmd/Ctrl + Enter to analyze</div>
+      <button class="start" id="analyzeBtn">analyze →</button>
+    </div>
+  </div>
+  <div class="loading" id="loading"><div class="spin"></div><span id="loadingText">extracting problems...</span></div>
+</div>
+
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="left"><span class="toplogo" id="goHome">moth/</span><span class="session" id="sessionName">session</span></div>
+    <div class="right">
+      <span class="sizelbl">size</span><input id="fontSlider" type="range" min="10" max="24" step="1" value="23" />
+      <button class="topbtn" id="helperModeBtn">helper: follow</button>
+      <button class="topbtn" id="newBtn">+ new</button>
+      <button class="topbtn" id="copyBtn">copy</button>
+    </div>
+  </div>
+  <div class="layout" id="layout">
+    <div class="ecol">
+      <div class="tabs" id="ptabs"></div>
+      <div class="editorwrap">
+        <div class="gutter" id="gutter">1</div>
+        <div class="editorPane" id="editorPane">
+          <div id="currentLine"></div>
+          <pre id="editorHl"></pre>
+          <textarea id="editor" spellcheck="false"></textarea>
+          <div id="fbFloat" class="show info">
+            <div id="fbFloatHead">
+              <span>line helper</span>
+              <span id="fbModeTag">follow</span>
+            </div>
+            <div id="fbFloatBody">pick a problem and start typing</div>
+          </div>
+        </div>
+      </div>
+      <div class="feedback"><span class="dot" id="dot"></span><span id="fbmsg">pick a problem and start typing</span></div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="handle" id="handle"><button class="cbtn" id="collapse">›</button></div>
+    <div class="rcol" id="rcol">
+      <div class="rtabs" id="rtabs"></div>
+      <div class="rpanel" id="hintsPanel"></div>
+      <div class="rpanel" id="stepsPanel"></div>
+      <div class="rpanel" id="syntaxPanel"></div>
+      <div class="rpanel" id="gotchasPanel"></div>
+      <div class="rpanel" id="refPanel"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='/api/claude';
+const MODEL='claude-haiku-4-5-20251001';
+
+const state={
+  problems:[], idx:0, collapsed:false, sw:268,
+  lastLineCount:1, feedbackTimer:null, liveCache:new Map(),
+  solutions:[], stepDone:[],
+  stepsCache:{}, supportCache:{},
+  baseFont:23,
+  helperFollow:true,
+  helperResizeObserver:null
+};
+
+const el={
+  home:document.getElementById('home'), app:document.getElementById('app'), hwInput:document.getElementById('hwInput'),
+  loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
+  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
+  ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
+  fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
+  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), copyBtn:document.getElementById('copyBtn'),
+  fontSlider:document.getElementById('fontSlider'), layout:document.getElementById('layout'), handle:document.getElementById('handle'), collapse:document.getElementById('collapse'),
+  rtabs:document.getElementById('rtabs'), hintsPanel:document.getElementById('hintsPanel'), stepsPanel:document.getElementById('stepsPanel'),
+  syntaxPanel:document.getElementById('syntaxPanel'), gotchasPanel:document.getElementById('gotchasPanel'), refPanel:document.getElementById('refPanel')
+};
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function parseJsonMaybe(text){
+  const clean=text.replace(/```json|```/g,'').trim();
+  try{return JSON.parse(clean);}catch{}
+  const mObj=clean.match(/\{[\s\S]*\}/);
+  if(mObj){try{return JSON.parse(mObj[0]);}catch{}}
+  const mArr=clean.match(/\[[\s\S]*\]/);
+  if(mArr){try{return JSON.parse(mArr[0]);}catch{}}
+  throw new Error('Model returned invalid JSON');
+}
+
+function sanitizePanelHtml(raw){
+  return String(raw || '')
+    .replace(/```html|```/g,'')
+    .replace(/<style[\s\S]*?<\/style>/gi,'')
+    .replace(/<script[\s\S]*?<\/script>/gi,'')
+    .replace(/<\/?(html|head|body|meta|link)[^>]*>/gi,'')
+    .replace(/\sstyle\s*=\s*(['"]).*?\1/gi,'');
+}
+
+async function callAnthropic(messages, system, max_tokens){
+  const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({model:MODEL,max_tokens,system,messages})});
+  const d=await r.json();
+  if(!r.ok) throw new Error(d.error?.message||r.statusText||'Anthropic request failed');
+  return d.content?.[0]?.text||'';
+}
+
+function setFeedback(status,msg){
+  const colors={ok:'var(--green)',warn:'var(--amber)',info:'var(--cyan)',err:'var(--red)'};
+  el.dot.style.background=colors[status]||'var(--text3)';
+  el.fbmsg.textContent=msg;
+  el.fbFloat.className='';
+  el.fbFloat.classList.add(status||'info','show');
+  el.fbFloatBody.textContent=msg;
+  autoExpandHelperForContent();
+  updateFloatingFeedbackPosition();
+}
+
+function updateGutterIfLineCountChanged(text){
+  const lc=(text.match(/\n/g)?.length||0)+1;
+  if(lc===state.lastLineCount) return;
+  state.lastLineCount=lc;
+  const lines=[];
+  for(let i=1;i<=lc;i++) lines.push(String(i));
+  el.gutter.textContent=lines.join('\n');
+}
+
+function syntaxHighlightPython(code){
+  const re=/("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#.*$|\b(?:def|class|return|if|elif|else|for|while|in|and|or|not|try|except|finally|with|as|from|import|pass|break|continue|yield|lambda|True|False|None|raise|global|nonlocal|assert|del|is)\b|\b(?:len|range|enumerate|map|filter|list|dict|set|tuple|int|str|float|print|sum|min|max|any|all|next|iter)\b|\b\d+(?:\.\d+)?\b)/gm;
+  let out='';
+  let idx=0;
+  let m;
+  while((m=re.exec(code))!==null){
+    const token=m[0];
+    out += escapeHtml(code.slice(idx,m.index));
+    let cls='t-fn';
+    if(token.startsWith('#')) cls='t-com';
+    else if(token.startsWith('"') || token.startsWith("'")) cls='t-str';
+    else if(/^\d/.test(token)) cls='t-num';
+    else if(/^(def|class|return|if|elif|else|for|while|in|and|or|not|try|except|finally|with|as|from|import|pass|break|continue|yield|lambda|True|False|None|raise|global|nonlocal|assert|del|is)$/.test(token)) cls='t-kw';
+    else if(/^(len|range|enumerate|map|filter|list|dict|set|tuple|int|str|float|print|sum|min|max|any|all|next|iter)$/.test(token)) cls='t-bi';
+    out += `<span class="${cls}">${escapeHtml(token)}</span>`;
+    idx = m.index + token.length;
+  }
+  out += escapeHtml(code.slice(idx));
+  return out;
+}
+
+function renderHighlight(){
+  const code=el.editor.value;
+  el.editorHl.innerHTML=syntaxHighlightPython(code) + '\n';
+  updateCurrentLine();
+}
+
+function getResponsiveScale(){
+  const w = window.innerWidth || 1440;
+  const h = window.innerHeight || 900;
+  // Scale relative to a typical laptop canvas, clamped for readability.
+  return Math.max(0.82, Math.min(1.35, Math.min(w / 1440, h / 900)));
+}
+
+function applyResponsiveFont(){
+  const scaled = Math.max(10, Math.min(42, state.baseFont * getResponsiveScale()));
+  const fs = scaled + 'px';
+  const lh = (scaled * 1.75) + 'px';
+  [el.editor,el.editorHl,el.gutter].forEach(n=>{n.style.fontSize=fs;n.style.lineHeight=lh;});
+  el.currentLine.style.height=lh;
+  updateHelperFontFromWidgetSize();
+
+  updateCurrentLine();
+}
+
+function updateHelperFontFromWidgetSize(){
+  const helperRect = el.fbFloat.getBoundingClientRect();
+  const h = helperRect.height || 120;
+  const w = helperRect.width || 260;
+  const sizeByHeight = h * 0.12;
+  const sizeByWidth = w * 0.055;
+  const helperBody = Math.max(13, Math.min(sizeByHeight, sizeByWidth));
+  const helperHead = Math.max(10, helperBody * 0.76);
+  el.fbFloatBody.style.fontSize = helperBody + 'px';
+  el.fbFloatBody.style.lineHeight = (helperBody * 1.45) + 'px';
+  el.fbFloatHead.style.fontSize = helperHead + 'px';
+}
+
+function autoExpandHelperForContent(){
+  const paneW = el.editorPane.clientWidth || 900;
+  const paneH = el.editorPane.clientHeight || 600;
+  const currentW = el.fbFloat.offsetWidth || 260;
+
+  const preferredW = Math.max(currentW, Math.floor(paneW * 0.42));
+  const width = Math.min(Math.max(260, paneW - 24), preferredW);
+  el.fbFloat.style.width = width + 'px';
+
+  // Let content fully flow, then grow the widget to fit.
+  el.fbFloat.style.height = 'auto';
+  const needed = el.fbFloat.scrollHeight + 8;
+  el.fbFloat.style.height = needed + 'px';
+
+  updateHelperFontFromWidgetSize();
+}
+
+function setEditorFont(px){
+  state.baseFont = Number(px) || state.baseFont;
+  applyResponsiveFont();
+}
+
+function placeCursorUnderPlaceholder(){
+  const code=el.editor.value;
+  const marker='*** YOUR CODE HERE ***';
+  const markerIdx=code.indexOf(marker);
+  if(markerIdx===-1) return;
+
+  const lineStart=code.lastIndexOf('\n', markerIdx)+1;
+  const lineEnd=code.indexOf('\n', markerIdx);
+  const safeLineEnd=lineEnd===-1?code.length:lineEnd;
+  const line=code.slice(lineStart,safeLineEnd);
+  const indent=(line.match(/^\s*/) || [''])[0];
+
+  // Ensure the next line exists and carries the same indentation as the placeholder line.
+  let nextLineStart=safeLineEnd;
+  if(safeLineEnd===code.length){
+    const appended='\n'+indent;
+    el.editor.value=code+appended;
+    nextLineStart=code.length+1;
+  }else{
+    nextLineStart=safeLineEnd+1;
+    const nextLineEnd=el.editor.value.indexOf('\n', nextLineStart);
+    const safeNextLineEnd=nextLineEnd===-1?el.editor.value.length:nextLineEnd;
+    const nextLine=el.editor.value.slice(nextLineStart,safeNextLineEnd);
+    const currentIndent=(nextLine.match(/^\s*/) || [''])[0];
+    if(currentIndent.length<indent.length){
+      const missing=indent.slice(currentIndent.length);
+      el.editor.value=
+        el.editor.value.slice(0,nextLineStart+currentIndent.length)+
+        missing+
+        el.editor.value.slice(nextLineStart+currentIndent.length);
+    }
+  }
+
+  const target=nextLineStart+indent.length;
+  el.editor.selectionStart=el.editor.selectionEnd=target;
+  updateGutterIfLineCountChanged(el.editor.value);
+  renderHighlight();
+}
+
+function applyPlaceholderIndentAtCursor(){
+  const marker='*** YOUR CODE HERE ***';
+  const code=el.editor.value;
+  if(!code.includes(marker)) return;
+
+  const lines=code.split('\n');
+  const starts=[];
+  let acc=0;
+  for(let i=0;i<lines.length;i++){
+    starts.push(acc);
+    acc += lines[i].length + 1;
+  }
+
+  const pos=el.editor.selectionStart||0;
+  let lineIdx=0;
+  for(let i=0;i<starts.length;i++){
+    if(starts[i] <= pos) lineIdx=i;
+    else break;
+  }
+  const lineStart=starts[lineIdx];
+  const col=pos-lineStart;
+
+  const markerLines=[];
+  for(let i=0;i<lines.length;i++){
+    if(lines[i].includes(marker)){
+      markerLines.push({
+        i,
+        indent:(lines[i].match(/^\s*/)||[''])[0].length
+      });
+    }
+  }
+  if(!markerLines.length) return;
+
+  // Find the marker block this cursor line belongs to.
+  let blockIdx=-1;
+  for(let m=0;m<markerLines.length;m++){
+    const startLine=markerLines[m].i+1;
+    const endLine=m+1<markerLines.length?markerLines[m+1].i:lines.length-1;
+    if(lineIdx>=startLine && lineIdx<=endLine){ blockIdx=m; break; }
+  }
+  if(blockIdx===-1) return;
+
+  const targetIndent=markerLines[blockIdx].indent;
+  const textLine=lines[lineIdx];
+  const currentIndent=(textLine.match(/^\s*/)||[''])[0].length;
+  const inLeadingWhitespace=col<=currentIndent;
+  const isWhitespaceLine=textLine.trim()==='';
+  if(!(inLeadingWhitespace || isWhitespaceLine || col<=targetIndent)) return;
+
+  if(currentIndent<targetIndent){
+    const missing=' '.repeat(targetIndent-currentIndent);
+    const insertAt=lineStart+currentIndent;
+    el.editor.value=code.slice(0,insertAt)+missing+code.slice(insertAt);
+    state.solutions[state.idx]=el.editor.value;
+    updateGutterIfLineCountChanged(el.editor.value);
+    renderHighlight();
+  }
+
+  const newLineStart=(el.editor.value.split('\n').slice(0,lineIdx).reduce((n,s)=>n+s.length+1,0));
+  const targetPos=newLineStart+targetIndent;
+  el.editor.selectionStart=el.editor.selectionEnd=targetPos;
+  updateCurrentLine();
+}
+
+function updateCurrentLine(){
+  const pos=el.editor.selectionStart||0;
+  const line=(el.editor.value.slice(0,pos).match(/\n/g)?.length||0)+1;
+  const lh=parseFloat(getComputedStyle(el.editor).lineHeight)||24.5;
+  const top=10 + (line-1)*lh - el.editor.scrollTop;
+  el.currentLine.style.transform=`translateY(${top}px)`;
+  updateFloatingFeedbackPosition();
+}
+
+function getCaretXY(){
+  const pos=el.editor.selectionStart||0;
+  const before=el.editor.value.slice(0,pos);
+  const line=(before.match(/\n/g)?.length||0)+1;
+  const col=pos-(before.lastIndexOf('\n')+1);
+  const lh=parseFloat(getComputedStyle(el.editor).lineHeight)||24.5;
+  const fs=parseFloat(getComputedStyle(el.editor).fontSize)||14;
+  const cw=fs*0.62; // monospace approximation
+  const x=12 + col*cw - el.editor.scrollLeft;
+  const y=10 + (line-1)*lh - el.editor.scrollTop;
+  return {x,y,lh};
+}
+
+function updateFloatingFeedbackPosition(){
+  if(!el.fbFloatBody.textContent) return;
+  if(!state.helperFollow){
+    clampFloatingHelper();
+    return;
+  }
+  const paneW=el.editorPane.clientWidth;
+  const paneH=el.editorPane.clientHeight;
+  const {x:caretX,y:caretY,lh}=getCaretXY();
+  const width=el.fbFloat.offsetWidth || Math.max(260,Math.floor(paneW*0.38));
+  el.fbFloat.style.width=width+'px';
+
+  // Prefer to the right of caret; flip left if needed.
+  let x=caretX+24;
+  if(x+width>paneW-10) x=Math.max(10,caretX-width-24);
+  // Keep away from the left text-start band when possible.
+  if(x<Math.floor(paneW*0.52) && paneW>520) x=Math.min(paneW-width-10,Math.floor(paneW*0.58));
+
+  const boxH=el.fbFloat.offsetHeight || Math.max(90,el.fbFloat.scrollHeight+4);
+  const minY=8;
+  const maxY=Math.max(minY,paneH-boxH-8);
+  const y=Math.max(minY,Math.min(maxY,caretY-lh*0.25));
+  el.fbFloat.style.left=x+'px';
+  el.fbFloat.style.top=y+'px';
+}
+
+function clampFloatingHelper(){
+  const paneW=el.editorPane.clientWidth;
+  const paneH=el.editorPane.clientHeight;
+  const w=el.fbFloat.offsetWidth || 260;
+  const h=el.fbFloat.offsetHeight || 100;
+  const left=parseFloat(el.fbFloat.style.left||'12');
+  const top=parseFloat(el.fbFloat.style.top||'12');
+  const x=Math.max(8,Math.min(paneW-w-8,left));
+  const y=Math.max(8,Math.min(paneH-h-8,top));
+  el.fbFloat.style.left=x+'px';
+  el.fbFloat.style.top=y+'px';
+}
+
+function setHelperMode(follow){
+  state.helperFollow=follow;
+  el.helperModeBtn.textContent=follow?'helper: follow':'helper: lock';
+  el.fbModeTag.textContent=follow?'follow':'locked';
+  updateFloatingFeedbackPosition();
+}
+
+function renderTabs(){
+  el.ptabs.innerHTML='';
+  state.problems.forEach((p,i)=>{
+    const b=document.createElement('button');
+    b.className='ptab'+(i===state.idx?' on':'');
+    b.textContent=p.name||`Q${i+1}`;
+    b.onclick=()=>loadProblem(i);
+    el.ptabs.appendChild(b);
+  });
+}
+
+function renderChips(){
+  const p=state.problems[state.idx];
+  const steps=p?.steps||[];
+  const done=state.stepDone[state.idx]||steps.map(()=>false);
+  const next=done.findIndex(v=>!v);
+  el.chips.innerHTML='';
+  steps.forEach((s,i)=>{
+    const c=document.createElement('span');
+    c.className='chip';
+    if(done[i]) c.classList.add('done');
+    else if(i===next) c.classList.add('next');
+    c.textContent=s;
+    el.chips.appendChild(c);
+  });
+}
+
+function applyCompletedSteps(indices){
+  const p=state.problems[state.idx];
+  const steps=p.steps||[];
+  state.stepDone[state.idx]=steps.map((_,i)=>indices.includes(i));
+  renderChips();
+}
+
+async function runLiveFeedback(){
+  const p=state.problems[state.idx];
+  if(!p) return;
+  const code=el.editor.value;
+  if(code.trim().length<6){
+    setFeedback('info','start coding and pause for line-by-line feedback');
+    return;
+  }
+  const ck=`${state.idx}::${code}`;
+  if(state.liveCache.has(ck)){
+    const cached=state.liveCache.get(ck);
+    setFeedback(cached.status,cached.msg);
+    applyCompletedSteps(cached.completedSteps||[]);
+    return;
+  }
+
+  const sys=`You are a CS tutor reviewing in-progress student code.
+Evaluate conceptual progress against checkpoints.
+Do NOT judge variable names.
+Only mention syntax if there is a clearly invalid Python construct that blocks progress.
+Respond ONLY JSON object: {"status":"ok|warn|info|err","msg":"1-2 short sentences, guiding question, no code answer","completedSteps":[indices]}.
+For completedSteps, be strict: mark only truly completed checkpoints.`;
+
+  try{
+    const resp=await callAnthropic([{role:'user',content:`Problem: ${p.title}\nTopic: ${p.topic}\nCheckpoints: ${(p.steps||[]).map((s,i)=>`${i}:${s}`).join(', ')}\n\nStudent code:\n${code}`}],sys,220);
+    const obj=parseJsonMaybe(resp);
+    const payload={
+      status:['ok','warn','info','err'].includes(obj.status)?obj.status:'info',
+      msg:String(obj.msg||'keep going'),
+      completedSteps:Array.isArray(obj.completedSteps)?obj.completedSteps.filter(n=>Number.isInteger(n)):[]
+    };
+    if(/syntax/i.test(payload.msg) && code.trim().length>0){
+      payload.status='info';
+    }
+    state.liveCache.set(ck,payload);
+    setFeedback(payload.status,payload.msg);
+    applyCompletedSteps(payload.completedSteps);
+  }catch(err){
+    setFeedback('warn','feedback unavailable right now; keep coding');
+  }
+}
+
+async function generateStepsPanel(i){
+  const p=state.problems[i];
+  if(state.stepsCache[i]){el.stepsPanel.innerHTML=state.stepsCache[i];return}
+  el.stepsPanel.innerHTML='<div class="cardx"><p>Generating steps...</p></div>';
+  const sys=`Write one HTML card per checkpoint.
+Format each as: <div class="swcard"><div class="swnum">step N</div><div class="swlabel">LABEL</div><div class="swbody"><p><strong>What to do:</strong> ...</p><p><strong>Why:</strong> ...</p><p><strong>Watch out:</strong> ...</p></div></div>.
+No markdown. No code answers.`;
+  try{
+    const resp=await callAnthropic([{role:'user',content:`Problem: ${p.title}\nTopic: ${p.topic}\nStarter:\n${p.starter}\n\nCheckpoints:\n${(p.steps||[]).join('\n')}`}],sys,900);
+    const html=sanitizePanelHtml(resp).trim();
+    state.stepsCache[i]=html;
+    el.stepsPanel.innerHTML=html;
+  }catch(err){
+    el.stepsPanel.innerHTML='<div class="cardx warn"><p>Could not generate steps yet.</p></div>';
+  }
+}
+
+function renderHints(hints){
+  return hints.map(h=>`<div class="cardx"><h4>${escapeHtml(h.title||'hint')}</h4><p>${escapeHtml(h.body||'')}</p></div>`).join('');
+}
+function renderSyntax(syntax){
+  return syntax.map(s=>`<div class="cardx"><h4>${escapeHtml(s.title||'pattern')}</h4><p>${escapeHtml(s.note||'')}</p><pre>${escapeHtml(s.code||'')}</pre></div>`).join('');
+}
+function renderGotchas(gotchas){
+  return gotchas.map(g=>`<div class="cardx ${g.type==='tip'?'tip':'warn'}"><h4>${escapeHtml(g.title||'gotcha')}</h4><p>${escapeHtml(g.body||'')}</p></div>`).join('');
+}
+
+function renderSupportFallback(i){
+  const p=state.problems[i];
+  const steps=(p.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('');
+  const fallback={
+    hints:`<div class="cardx"><h4>focus</h4><p>Work checkpoint-by-checkpoint for <code>${escapeHtml(p.name||'Q')}</code>.</p></div><div class="cardx"><h4>starter first</h4><p>Fill placeholders before refactoring style. Preserve function signatures.</p></div><div class="cardx"><h4>test mentally</h4><p>Walk through a tiny input after each edit to confirm state transitions.</p></div><div class="cardx"><h4>edge cases</h4><p>Check empty/min boundaries and stop conditions.</p></div>`,
+    syntax:`<div class="cardx"><h4>if / return</h4><pre>if condition:\n    return value</pre></div><div class="cardx"><h4>loop pattern</h4><pre>while cond:\n    # update state\n    pass</pre></div><div class="cardx"><h4>iterator stop</h4><pre>if done:\n    raise StopIteration</pre></div><div class="cardx"><h4>state update</h4><pre>value = current\ncurrent += 1\nreturn value</pre></div>`,
+    gotchas:`<div class="cardx warn"><h4>off-by-one</h4><p>Double-check boundary comparisons.</p></div><div class="cardx warn"><h4>state reset</h4><p>Reset state in the correct method.</p></div><div class="cardx warn"><h4>return timing</h4><p>Capture value before mutating cursor.</p></div><div class="cardx tip"><h4>checkpoints</h4><p>Map code blocks to the checkpoint chips.</p></div><div class="cardx tip"><h4>small tests</h4><p>Use tiny examples after each change.</p></div><div class="cardx tip"><h4>progressive build</h4><p>Make one working piece at a time.</p></div>`,
+    ref:`<h3>Current Problem</h3><p><code>${escapeHtml(p.title||'Problem')}</code></p><h3>Checkpoint Plan</h3><ul>${steps || '<li>Implement core logic</li>'}</ul><h3>Mental model</h3><p>Implement each checkpoint as a small verifiable unit.</p>`
+  };
+  state.supportCache[i]=fallback;
+  el.hintsPanel.innerHTML=fallback.hints;
+  el.syntaxPanel.innerHTML=fallback.syntax;
+  el.gotchasPanel.innerHTML=fallback.gotchas;
+  el.refPanel.innerHTML=fallback.ref;
+}
+
+async function generateSupportPanels(i){
+  const p=state.problems[i];
+  if(state.supportCache[i]){
+    const c=state.supportCache[i];
+    el.hintsPanel.innerHTML=c.hints;
+    el.syntaxPanel.innerHTML=c.syntax;
+    el.gotchasPanel.innerHTML=c.gotchas;
+    el.refPanel.innerHTML=c.ref;
+    return;
+  }
+
+  el.hintsPanel.innerHTML='<div class="cardx"><p>Generating hints for this question...</p></div>';
+  el.syntaxPanel.innerHTML='<div class="cardx"><p>Generating syntax guide...</p></div>';
+  el.gotchasPanel.innerHTML='<div class="cardx"><p>Generating gotchas...</p></div>';
+  el.refPanel.innerHTML='<div class="cardx"><p>Generating AI reference...</p></div>';
+
+  try{
+    const context=`Problem: ${p.title}\nTopic: ${p.topic}\nStarter:\n${p.starter}\nCheckpoints: ${(p.steps||[]).join(', ')}`;
+    const [hintsRaw, syntaxRaw, gotchasRaw, refRaw] = await Promise.all([
+      callAnthropic([{role:'user',content:`${context}\n\nCreate exactly 4 hint cards as HTML only. Format each as <div class=\"cardx\"><h4>TITLE</h4><p>BODY</p></div>. No final solution.`}], 'You are a CS tutor.', 700),
+      callAnthropic([{role:'user',content:`${context}\n\nCreate exactly 4 syntax cards as HTML only. Use format <div class=\"cardx\"><h4>TITLE</h4><p>NOTE</p><pre>CODE</pre></div>. Keep snippets short.`}], 'You are a CS tutor.', 850),
+      callAnthropic([{role:'user',content:`${context}\n\nCreate exactly 6 gotcha/tip cards as HTML only. Use <div class=\"cardx warn\"> or <div class=\"cardx tip\">, plus <h4> and <p>.`}], 'You are a CS tutor.', 800),
+      callAnthropic([{role:'user',content:`${context}\n\nCreate concise problem-specific reference HTML with sections Core concept, Key syntax, Common mistakes, Mental model using <h3>,<p>,<ul>,<li>,<code>,<pre>.`}], 'You are a CS tutor.', 900),
+    ]);
+    const cached={
+      hints:sanitizePanelHtml(hintsRaw).trim(),
+      syntax:sanitizePanelHtml(syntaxRaw).trim(),
+      gotchas:sanitizePanelHtml(gotchasRaw).trim(),
+      ref:sanitizePanelHtml(refRaw).trim()
+    };
+    state.supportCache[i]=cached;
+    el.hintsPanel.innerHTML=cached.hints;
+    el.syntaxPanel.innerHTML=cached.syntax;
+    el.gotchasPanel.innerHTML=cached.gotchas;
+    el.refPanel.innerHTML=cached.ref;
+  }catch(err){
+    renderSupportFallback(i);
+  }
+}
+
+function saveCurrentSolution(){
+  if(!state.problems.length) return;
+  state.solutions[state.idx]=el.editor.value;
+}
+
+function loadProblem(i){
+  if(i===state.idx && state.problems.length) return;
+  saveCurrentSolution();
+  state.idx=i;
+  state.lastLineCount=0;
+  renderTabs();
+
+  const code=state.solutions[i] ?? state.problems[i].starter ?? '';
+  el.editor.value=code;
+  updateGutterIfLineCountChanged(code);
+  renderHighlight();
+  placeCursorUnderPlaceholder();
+  el.editor.focus();
+  renderChips();
+  setFeedback('info','write under *** YOUR CODE HERE *** and pause for feedback');
+
+  generateStepsPanel(i);
+  generateSupportPanels(i);
+}
+
+async function analyzeHomework(){
+  const raw=el.hwInput.value.trim();
+  if(!raw){setFeedback('warn','paste homework first');return}
+
+  el.loading.classList.add('show');
+  el.loadingText.textContent='extracting problems...';
+
+  const sys=`Extract coding problems from homework. Return ONLY a JSON array.
+Each item: {name,title,starter,steps,topic}.
+Preserve *** YOUR CODE HERE *** exactly in starter if present.
+Steps are 2-4 word labels (not instructions).
+Set 3 steps for short problems, 4-5 for medium, 5-6 for long.`;
+
+  try{
+    const resp=await callAnthropic([{role:'user',content:`Homework:\n${raw}`}],sys,3000);
+    const arr=parseJsonMaybe(resp);
+    if(!Array.isArray(arr)||!arr.length) throw new Error('No problems extracted');
+
+    state.problems=arr.map((p,idx)=>({
+      name:p.name||`Q${idx+1}`,
+      title:p.title||`Problem ${idx+1}`,
+      starter:typeof p.starter==='string'?p.starter:'# *** YOUR CODE HERE ***\n',
+      steps:Array.isArray(p.steps)&&p.steps.length?p.steps:['base case','core logic','return value'],
+      topic:p.topic||'general'
+    }));
+  }catch(err){
+    state.problems=[{name:'Q1',title:'Problem',starter:'# *** YOUR CODE HERE ***\n',steps:['base case','core logic','return value'],topic:'general'}];
+  }
+
+  state.solutions=state.problems.map(p=>p.starter||'');
+  state.stepDone=state.problems.map(p=>(p.steps||[]).map(()=>false));
+  state.stepsCache={};
+  state.supportCache={};
+  state.liveCache=new Map();
+
+  el.loading.classList.remove('show');
+  el.home.classList.add('hide');
+  el.app.classList.add('show');
+  el.sessionName.textContent=raw.slice(0,58)+(raw.length>58?'...':'');
+
+  state.idx=-1;
+  loadProblem(0);
+}
+
+function goHome(){
+  saveCurrentSolution();
+  el.app.classList.remove('show');
+  el.home.classList.remove('hide');
+  el.hwInput.focus();
+}
+
+function insertAtSelection(text,replaceStart=null,replaceEnd=null){
+  const start=replaceStart===null?el.editor.selectionStart:replaceStart;
+  const end=replaceEnd===null?el.editor.selectionEnd:replaceEnd;
+  const old=el.editor.value;
+  el.editor.value=old.slice(0,start)+text+old.slice(end);
+  const pos=start+text.length;
+  el.editor.selectionStart=el.editor.selectionEnd=pos;
+}
+
+function onEditorKeyDown(e){
+  const v=el.editor.value;
+  const s=el.editor.selectionStart;
+  const ee=el.editor.selectionEnd;
+
+  if(e.key==='Tab'){
+    e.preventDefault();
+    if(e.shiftKey){
+      const ls=v.lastIndexOf('\n',s-1)+1;
+      if(v.slice(ls,ls+4)==='    '){
+        insertAtSelection('',ls,ls+4);
+        el.editor.selectionStart=Math.max(ls,s-4);
+        el.editor.selectionEnd=Math.max(ls,ee-4);
+      }
+    }else{
+      insertAtSelection('    ');
+    }
+    onEditorInput();
+    return;
+  }
+
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const ls=v.lastIndexOf('\n',s-1)+1;
+    const line=v.slice(ls,s);
+    const ind=(line.match(/^\s*/)||[''])[0];
+    const extra=line.trimEnd().endsWith(':')?'    ':'';
+    insertAtSelection('\n'+ind+extra);
+    onEditorInput();
+    return;
+  }
+
+  if(e.key==='Backspace'&&s===ee){
+    const ls=v.lastIndexOf('\n',s-1)+1;
+    const prefix=v.slice(ls,s);
+    if(/^\s+$/.test(prefix)&&prefix.endsWith('    ')){
+      e.preventDefault();
+      insertAtSelection('',s-4,s);
+      onEditorInput();
+    }
+  }
+}
+
+function onEditorInput(){
+  state.solutions[state.idx]=el.editor.value;
+  updateGutterIfLineCountChanged(el.editor.value);
+  renderHighlight();
+  clearTimeout(state.feedbackTimer);
+  state.feedbackTimer=setTimeout(runLiveFeedback,3000);
+}
+
+function initSidebarTabs(){
+  const tabs=[['steps','stepsPanel'],['hints','hintsPanel'],['syntax','syntaxPanel'],['gotchas','gotchasPanel'],['ai ref','refPanel']];
+  el.rtabs.innerHTML='';
+  tabs.forEach(([label,panel],i)=>{
+    const t=document.createElement('button');
+    t.className='rtab'+(i===0?' on':'');
+    t.textContent=label;
+    t.onclick=()=>{
+      document.querySelectorAll('.rtab').forEach(x=>x.classList.remove('on'));
+      document.querySelectorAll('.rpanel').forEach(x=>x.classList.remove('on'));
+      t.classList.add('on');
+      el[panel].classList.add('on');
+    };
+    el.rtabs.appendChild(t);
+  });
+  el.stepsPanel.classList.add('on');
+}
+
+function bindEvents(){
+  el.analyzeBtn.onclick=analyzeHomework;
+  el.hwInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();analyzeHomework();}});
+  el.goHome.onclick=goHome;
+  el.helperModeBtn.onclick=()=>setHelperMode(!state.helperFollow);
+  el.newBtn.onclick=goHome;
+
+  el.fontSlider.oninput=()=>setEditorFont(Number(el.fontSlider.value));
+  setEditorFont(23);
+
+  el.editor.addEventListener('keydown',onEditorKeyDown);
+  el.editor.addEventListener('input',onEditorInput);
+  el.editor.addEventListener('click',()=>{ applyPlaceholderIndentAtCursor(); updateCurrentLine(); });
+  el.editor.addEventListener('mouseup',()=>{ applyPlaceholderIndentAtCursor(); updateCurrentLine(); });
+  el.editor.addEventListener('keyup',updateCurrentLine);
+  el.editor.addEventListener('scroll',()=>{
+    el.editorHl.scrollTop=el.editor.scrollTop;
+    el.editorHl.scrollLeft=el.editor.scrollLeft;
+    el.gutter.scrollTop=el.editor.scrollTop;
+    updateCurrentLine();
+  });
+
+  let hDrag=false, dragDx=0, dragDy=0;
+  el.fbFloatHead.addEventListener('mousedown',e=>{
+    hDrag=true;
+    state.helperFollow=false;
+    setHelperMode(false);
+    const rect=el.fbFloat.getBoundingClientRect();
+    dragDx=e.clientX-rect.left;
+    dragDy=e.clientY-rect.top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!hDrag) return;
+    const paneRect=el.editorPane.getBoundingClientRect();
+    el.fbFloat.style.left=(e.clientX-paneRect.left-dragDx)+'px';
+    el.fbFloat.style.top=(e.clientY-paneRect.top-dragDy)+'px';
+    clampFloatingHelper();
+  });
+  document.addEventListener('mouseup',()=>{hDrag=false;});
+
+  el.copyBtn.onclick=()=>{
+    navigator.clipboard.writeText(el.editor.value).then(()=>{
+      el.copyBtn.textContent='✓ copied';
+      el.copyBtn.classList.add('copied');
+      setTimeout(()=>{el.copyBtn.textContent='copy';el.copyBtn.classList.remove('copied');},2000);
+    });
+  };
+
+  let drag=false,startX=0,startW=state.sw;
+  el.handle.addEventListener('mousedown',e=>{
+    if(state.collapsed) return;
+    drag=true;startX=e.clientX;startW=state.sw;document.body.style.cursor='col-resize';
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!drag) return;
+    const w=Math.max(80,Math.min(1100,startW-(e.clientX-startX)));
+    state.sw=w;
+    el.layout.style.setProperty('--sw',w+'px');
+  });
+  document.addEventListener('mouseup',()=>{drag=false;document.body.style.cursor='';});
+  window.addEventListener('resize',()=>{
+    applyResponsiveFont();
+    updateFloatingFeedbackPosition();
+  });
+
+  el.collapse.onclick=()=>{
+    state.collapsed=!state.collapsed;
+    el.layout.classList.toggle('collapsed',state.collapsed);
+    el.collapse.textContent=state.collapsed?'‹':'›';
+  };
+
+  setHelperMode(true);
+  setFeedback('info',el.fbmsg.textContent||'pick a problem and start typing');
+
+  if(typeof ResizeObserver !== 'undefined'){
+    state.helperResizeObserver = new ResizeObserver(()=>{
+      updateHelperFontFromWidgetSize();
+      updateFloatingFeedbackPosition();
+    });
+    state.helperResizeObserver.observe(el.fbFloat);
+  }
+}
+
+initSidebarTabs();
+bindEvents();
+</script>
+</body>
+</html>
