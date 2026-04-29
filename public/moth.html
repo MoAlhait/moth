@@ -56,6 +56,7 @@ code,pre{font-family:var(--mono)}
 .topbtn{height:28px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);padding:0 10px;border-radius:7px;font-size:12px;cursor:pointer}
 .topbtn:hover{border-color:var(--border3);color:var(--text)}
 .topbtn.copied{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.45);color:var(--green)}
+.topbtn:disabled{opacity:0.45;cursor:not-allowed}
 
 .layout{position:relative;display:grid;grid-template-columns:1fr 4px var(--sw,268px);height:calc(100vh - 42px)}
 .ecol{min-width:0;display:flex;flex-direction:column}
@@ -154,11 +155,11 @@ code,pre{font-family:var(--mono)}
 <div class="home" id="home">
   <div class="logo">moth/</div>
   <h1>paste your <span>homework.</span><br/>i'll handle the rest.</h1>
-  <p>paste any assignment prompt or problem set. moth will split it into problems and coach you checkpoint by checkpoint.</p>
+  <p>paste any assignment — or ask for a topic (e.g. inheritance) to get a generated practice problem. moth will coach you checkpoint by checkpoint.</p>
   <div class="card">
     <div class="cardtop">
-      <div class="clabel">paste homework here</div>
-      <textarea id="hwInput" placeholder="paste your full homework prompt, problem set, or topic..."></textarea>
+      <div class="clabel">homework, or ask for a topic</div>
+      <textarea id="hwInput" placeholder="paste a full assignment — or type e.g. &quot;give me a question on inheritance&quot; or &quot;linked list practice&quot;"></textarea>
     </div>
     <div class="cardbot">
       <div class="hint">Cmd/Ctrl + Enter to analyze</div>
@@ -174,6 +175,7 @@ code,pre{font-family:var(--mono)}
     <div class="right">
       <span class="sizelbl">size</span><input id="fontSlider" type="range" min="10" max="24" step="1" value="23" />
       <button class="topbtn" id="helperModeBtn">helper: follow</button>
+      <button class="topbtn" id="similarBtn" title="Generate a new problem like this one">+ similar</button>
       <button class="topbtn" id="newBtn">+ new</button>
       <button class="topbtn" id="copyBtn">copy</button>
     </div>
@@ -228,7 +230,7 @@ const state={
 const el={
   home:document.getElementById('home'), app:document.getElementById('app'), hwInput:document.getElementById('hwInput'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
-  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
+  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), similarBtn:document.getElementById('similarBtn'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
   fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
   dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), copyBtn:document.getElementById('copyBtn'),
@@ -265,6 +267,28 @@ async function callAnthropic(messages, system, max_tokens){
   const d=await r.json();
   if(!r.ok) throw new Error(d.error?.message||r.statusText||'Anthropic request failed');
   return d.content?.[0]?.text||'';
+}
+
+function normalizeProblem(p, idx){
+  return {
+    name:p.name||`Q${idx+1}`,
+    title:p.title||`Problem ${idx+1}`,
+    starter:typeof p.starter==='string'?p.starter:'# *** YOUR CODE HERE ***\n',
+    steps:Array.isArray(p.steps)&&p.steps.length?p.steps:['base case','core logic','return value'],
+    topic:p.topic||'general'
+  };
+}
+
+function appendProblem(raw){
+  const idx=state.problems.length;
+  const obj=Array.isArray(raw)?raw[0]:raw;
+  if(!obj||typeof obj!=='object') throw new Error('Invalid problem from model');
+  const norm=normalizeProblem(obj,idx);
+  state.problems.push(norm);
+  state.solutions.push(norm.starter||'');
+  state.stepDone.push((norm.steps||[]).map(()=>false));
+  renderTabs();
+  loadProblem(idx);
 }
 
 function setFeedback(status,msg){
@@ -722,6 +746,40 @@ function loadProblem(i){
   generateSupportPanels(i);
 }
 
+async function generateSimilarQuestion(){
+  if(!state.problems.length) return;
+  saveCurrentSolution();
+  const p=state.problems[state.idx];
+  el.similarBtn.disabled=true;
+  setFeedback('info','generating a similar question...');
+  const sys=`Return ONLY a single JSON object (not an array) for ONE new practice problem.
+Fields: {name,title,starter,steps,topic}.
+- name: short tab label
+- title: full problem title
+- starter: Python starter with *** YOUR CODE HERE *** where student types
+- steps: 2-4 word checkpoint labels, 3-6 items
+- topic: CS concept
+The new problem must test the SAME skills and difficulty as the reference, but use different names, data, and details (not a copy).`;
+  const user=`Reference problem to vary (not copy):
+title: ${p.title}
+topic: ${p.topic}
+checkpoints: ${(p.steps||[]).join(', ')}
+starter template (invent a new scenario, new function names):
+${p.starter}
+Create one new similar problem.`;
+  try{
+    const resp=await callAnthropic([{role:'user',content:user}],sys,2600);
+    let obj=parseJsonMaybe(resp);
+    if(Array.isArray(obj)){obj=obj[0]}
+    appendProblem(obj);
+    setFeedback('ok','opened similar question tab — start coding');
+  }catch(err){
+    setFeedback('warn',String(err.message||err)||'could not generate');
+  }finally{
+    el.similarBtn.disabled=false;
+  }
+}
+
 async function analyzeHomework(){
   const raw=el.hwInput.value.trim();
   if(!raw){setFeedback('warn','paste homework first');return}
@@ -729,26 +787,26 @@ async function analyzeHomework(){
   el.loading.classList.add('show');
   el.loadingText.textContent='extracting problems...';
 
-  const sys=`Extract coding problems from homework. Return ONLY a JSON array.
-Each item: {name,title,starter,steps,topic}.
-Preserve *** YOUR CODE HERE *** exactly in starter if present.
-Steps are 2-4 word labels (not instructions).
-Set 3 steps for short problems, 4-5 for medium, 5-6 for long.`;
+  const sys=`You receive either (A) pasted homework/code to extract problems from, OR (B) a short topic/practice request only (examples: "give me a question on inheritance", "BST practice problem", "linked lists").
+Rules:
+- Always return ONLY a JSON array (never markdown outside JSON).
+Each item has shape: {name,title,starter,steps,topic}.
+- For (A): extract real problems from the pasted text.
+- For (B): invent ONE plausible CS homework-style practice problem matching the user's topic — include starter skeleton with *** YOUR CODE HERE *** and 3-6 checkpoint step labels.
+- Preserve *** YOUR CODE HERE *** in starter when you create it.
+- Steps: 2-4 word labels, not full instructions. Count: 3 for small, 4-5 medium, 5-6 longer problems.`;
 
   try{
-    const resp=await callAnthropic([{role:'user',content:`Homework:\n${raw}`}],sys,3000);
-    const arr=parseJsonMaybe(resp);
-    if(!Array.isArray(arr)||!arr.length) throw new Error('No problems extracted');
-
-    state.problems=arr.map((p,idx)=>({
-      name:p.name||`Q${idx+1}`,
-      title:p.title||`Problem ${idx+1}`,
-      starter:typeof p.starter==='string'?p.starter:'# *** YOUR CODE HERE ***\n',
-      steps:Array.isArray(p.steps)&&p.steps.length?p.steps:['base case','core logic','return value'],
-      topic:p.topic||'general'
-    }));
+    const resp=await callAnthropic([{role:'user',content:`Input:\n${raw}`}],sys,3000);
+    const parsed=parseJsonMaybe(resp);
+    let list;
+    if(Array.isArray(parsed)){list=parsed}
+    else if(parsed&&typeof parsed==='object'){list=[parsed]}
+    else throw new Error('No problems extracted');
+    if(!list.length) throw new Error('No problems extracted');
+    state.problems=list.map((p,i)=>normalizeProblem(p,i));
   }catch(err){
-    state.problems=[{name:'Q1',title:'Problem',starter:'# *** YOUR CODE HERE ***\n',steps:['base case','core logic','return value'],topic:'general'}];
+    state.problems=[normalizeProblem({},0)];
   }
 
   state.solutions=state.problems.map(p=>p.starter||'');
@@ -856,6 +914,7 @@ function bindEvents(){
   el.hwInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();analyzeHomework();}});
   el.goHome.onclick=goHome;
   el.helperModeBtn.onclick=()=>setHelperMode(!state.helperFollow);
+  el.similarBtn.onclick=generateSimilarQuestion;
   el.newBtn.onclick=goHome;
 
   el.fontSlider.oninput=()=>setEditorFont(Number(el.fontSlider.value));
