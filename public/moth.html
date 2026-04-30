@@ -63,6 +63,17 @@ code,pre{font-family:var(--mono)}
 .topbtn:hover{border-color:var(--border3);color:var(--text)}
 .topbtn.copied{background:rgba(52,211,153,.15);border-color:rgba(52,211,153,.45);color:var(--green)}
 .topbtn:disabled{opacity:0.45;cursor:not-allowed}
+.similarWrap{position:relative}
+.similarMenu{
+  position:absolute; right:0; top:34px; min-width:150px; z-index:9;
+  border:1px solid var(--border2); border-radius:8px; background:var(--bg2);
+  box-shadow:0 8px 20px rgba(0,0,0,.25); display:none; overflow:hidden;
+}
+.similarMenu.show{display:block}
+.similarOpt{
+  width:100%; text-align:left; padding:8px 10px; border:none; background:transparent; color:var(--text2); font-size:12px; cursor:pointer;
+}
+.similarOpt:hover{background:var(--bg3); color:var(--text)}
 
 .layout{position:relative;display:grid;grid-template-columns:1fr 4px var(--sw,268px);height:calc(100vh - 42px)}
 .ecol{min-width:0;display:flex;flex-direction:column}
@@ -186,6 +197,14 @@ code,pre{font-family:var(--mono)}
 .termRow{display:flex;gap:8px;margin-top:8px}
 .termBtn{height:28px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);padding:0 10px;border-radius:7px;font-size:12px;cursor:pointer}
 .questionText{white-space:pre-wrap;font:13px/1.6 var(--sans);color:var(--text);margin:0}
+.questionMd{font:13px/1.6 var(--sans);color:var(--text)}
+.questionMd h1,.questionMd h2,.questionMd h3{margin:8px 0 6px 0;color:var(--text)}
+.questionMd p{margin:6px 0}
+.questionMd ul,.questionMd ol{padding-left:18px;margin:6px 0}
+.questionMd li{margin:4px 0}
+.questionMd code{font-family:var(--mono);background:var(--bg3);padding:1px 4px;border-radius:4px;color:#E5C07B}
+.questionMd pre{background:#11151c;border:1px solid var(--border2);border-radius:8px;padding:10px;overflow:auto;margin:8px 0}
+.questionMd pre code{background:transparent;padding:0;color:var(--text)}
 </style>
 </head>
 <body>
@@ -221,13 +240,15 @@ code,pre{font-family:var(--mono)}
       <button class="topbtn" id="helperToggleBtn">helper: on</button>
       <button class="topbtn" id="questionBtn">question</button>
       <button class="topbtn" id="terminalBtn">terminal</button>
-      <select class="topbtn" id="similarDifficulty" title="Difficulty for similar question">
-        <option value="easier">easier</option>
-        <option value="same difficulty" selected>same</option>
-        <option value="harder">harder</option>
-        <option value="much harder">much harder</option>
-      </select>
-      <button class="topbtn" id="similarBtn" title="Generate a new problem like this one">+ similar</button>
+      <div class="similarWrap">
+        <button class="topbtn" id="similarBtn" title="Generate a new problem like this one">+ similar</button>
+        <div class="similarMenu" id="similarMenu">
+          <button class="similarOpt" data-diff="easier">easier</button>
+          <button class="similarOpt" data-diff="same difficulty">same difficulty</button>
+          <button class="similarOpt" data-diff="harder">harder</button>
+          <button class="similarOpt" data-diff="much harder">much harder</button>
+        </div>
+      </div>
       <button class="topbtn" id="newBtn">+ new</button>
       <button class="topbtn" id="copyBtn">copy</button>
     </div>
@@ -281,6 +302,7 @@ code,pre{font-family:var(--mono)}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
@@ -291,6 +313,7 @@ const state={
   solutions:[], stepDone:[],
   stepsCache:{}, supportCache:{}, questionDigestCache:{},
   baseFont:23,
+  similarDifficulty:'same difficulty',
   helperEnabled:true,
   helperFollow:true,
   helperResizeObserver:null,
@@ -301,7 +324,7 @@ const el={
   home:document.getElementById('home'), app:document.getElementById('app'), hwInput:document.getElementById('hwInput'),
   similarMode:document.getElementById('similarMode'), examPdf:document.getElementById('examPdf'), pickPdfBtn:document.getElementById('pickPdfBtn'), pdfName:document.getElementById('pdfName'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
-  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), similarDifficulty:document.getElementById('similarDifficulty'), similarBtn:document.getElementById('similarBtn'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
+  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
   fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
   dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), copyBtn:document.getElementById('copyBtn'),
@@ -430,7 +453,16 @@ function renderQuestionPrompt(){
   const prompt=state.questionDigestCache[state.idx] || getQuestionPromptText(p);
   const short=prompt.split('\n').slice(0,2).join(' ').slice(0,240);
   el.questionInline.textContent=short + (short.length>=220?'…':'');
-  el.questionWinBody.innerHTML=`<pre class="questionText">${escapeHtml(prompt)}</pre>`;
+  if(typeof marked!=='undefined'){
+    const html = marked.parse(String(prompt||''), { breaks: true });
+    // basic sanitize guard for generated content
+    const cleaned = String(html)
+      .replace(/<script[\s\S]*?<\/script>/gi,'')
+      .replace(/\son\w+=("[^"]*"|'[^']*')/gi,'');
+    el.questionWinBody.innerHTML=`<div class="questionMd">${cleaned}</div>`;
+  }else{
+    el.questionWinBody.innerHTML=`<pre class="questionText">${escapeHtml(prompt)}</pre>`;
+  }
   updateWindowScaledText(el.questionWin);
 }
 
@@ -475,7 +507,7 @@ function updateWindowScaledText(win){
     return;
   }
   if(win===el.questionWin){
-    const q=el.questionWinBody.querySelector('.questionText');
+    const q=el.questionWinBody.querySelector('.questionText, .questionMd');
     if(!q) return;
     const size=Math.max(12,Math.min(34,Math.min(w*0.032,h*0.055)));
     q.style.fontSize=size+'px';
@@ -975,7 +1007,7 @@ async function generateSimilarQuestion(){
   if(!state.problems.length) return;
   saveCurrentSolution();
   const p=state.problems[state.idx];
-  const diff = el.similarDifficulty.value || 'same difficulty';
+  const diff = state.similarDifficulty || 'same difficulty';
   const existing = state.problems.map((q,i)=>`${i+1}. ${q.title}`).join('\n');
   el.similarBtn.disabled=true;
   setFeedback('info','generating a similar question...');
@@ -1181,7 +1213,22 @@ function bindEvents(){
   el.helperToggleBtn.onclick=toggleHelperEnabled;
   el.questionBtn.onclick=()=>{ renderQuestionPrompt(); toggleWindow(el.questionWin); };
   el.terminalBtn.onclick=()=>toggleWindow(el.terminalWin);
-  el.similarBtn.onclick=generateSimilarQuestion;
+  el.similarBtn.onclick=(e)=>{
+    e.stopPropagation();
+    el.similarMenu.classList.toggle('show');
+  };
+  el.similarMenu.querySelectorAll('.similarOpt').forEach(opt=>{
+    opt.addEventListener('click',()=>{
+      state.similarDifficulty=opt.dataset.diff||'same difficulty';
+      el.similarMenu.classList.remove('show');
+      generateSimilarQuestion();
+    });
+  });
+  document.addEventListener('click',(e)=>{
+    if(!el.similarMenu.contains(e.target) && e.target!==el.similarBtn){
+      el.similarMenu.classList.remove('show');
+    }
+  });
   el.newBtn.onclick=goHome;
   el.questionWinClose.onclick=()=>toggleWindow(el.questionWin,false);
   el.terminalWinClose.onclick=()=>toggleWindow(el.terminalWin,false);
