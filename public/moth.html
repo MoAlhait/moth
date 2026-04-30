@@ -177,6 +177,21 @@ code,pre{font-family:var(--mono)}
 
 .collapsed{grid-template-columns:1fr 4px 0px}
 .collapsed .rcol{display:none}
+.newOverlay{
+  position:absolute; inset:0; z-index:12; display:none;
+  background:rgba(17,21,28,.45);
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+  align-items:center; justify-content:center; padding:24px;
+}
+.newOverlay.show{display:flex}
+.newModal{
+  width:100%; max-width:640px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; overflow:hidden;
+  box-shadow:0 18px 40px rgba(0,0,0,.42);
+}
+.newModalTop{padding:16px}
+.newModalTitle{font:500 10px var(--mono);color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.newModalBot{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);background:var(--bg1)}
 .popWin{
   position:absolute; z-index:8; background:rgba(33,37,43,.98); border:1px solid var(--border2); border-radius:10px;
   box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden; display:none; resize:both; flex-direction:column;
@@ -299,6 +314,24 @@ code,pre{font-family:var(--mono)}
       </div>
     </div>
   </div>
+  <div class="newOverlay" id="newOverlay">
+    <div class="newModal" id="newModal">
+      <div class="newModalTop">
+        <div class="newModalTitle">homework, or ask for a topic</div>
+        <div class="modeRow">
+          <label class="modeToggle"><input type="checkbox" id="newSimilarMode" /> make similar from past exam (pdf)</label>
+          <button class="miniBtn" id="newPickPdfBtn" style="display:none">choose pdf</button>
+          <span class="pdfName" id="newPdfName" style="display:none">no pdf selected</span>
+          <input id="newExamPdf" type="file" accept="application/pdf" style="display:none" />
+        </div>
+        <textarea id="newHwInput" placeholder="paste a full assignment — or type e.g. &quot;give me a question on inheritance&quot; or &quot;linked list practice&quot;" style="width:100%;min-height:120px;background:transparent;border:none;outline:none;color:var(--text);line-height:1.6;font-size:14px;resize:none"></textarea>
+      </div>
+      <div class="newModalBot">
+        <div class="hint">click outside to cancel</div>
+        <button class="start" id="newAnalyzeBtn">analyze →</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -324,6 +357,8 @@ const state={
 const el={
   home:document.getElementById('home'), app:document.getElementById('app'), hwInput:document.getElementById('hwInput'),
   similarMode:document.getElementById('similarMode'), examPdf:document.getElementById('examPdf'), pickPdfBtn:document.getElementById('pickPdfBtn'), pdfName:document.getElementById('pdfName'),
+  newOverlay:document.getElementById('newOverlay'), newModal:document.getElementById('newModal'), newHwInput:document.getElementById('newHwInput'),
+  newSimilarMode:document.getElementById('newSimilarMode'), newExamPdf:document.getElementById('newExamPdf'), newPickPdfBtn:document.getElementById('newPickPdfBtn'), newPdfName:document.getElementById('newPdfName'), newAnalyzeBtn:document.getElementById('newAnalyzeBtn'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
   goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
@@ -1122,6 +1157,80 @@ Each item has shape: {name,title,starter,steps,topic}.
   loadProblem(0);
 }
 
+async function analyzeFromModal(){
+  const raw=el.newHwInput.value.trim();
+  const similarMode=Boolean(el.newSimilarMode.checked);
+  if(!raw && !similarMode){setFeedback('warn','paste homework first');return}
+
+  el.loading.classList.add('show');
+  el.loadingText.textContent=similarMode?'reading exam pdf...':'extracting problems...';
+
+  try{
+    let sys;
+    let userContent;
+    if(similarMode){
+      const file=el.newExamPdf.files && el.newExamPdf.files[0];
+      if(!file) throw new Error('Turned on "make similar" but no PDF selected');
+      const pdfText=await extractPdfText(file);
+      if(!pdfText) throw new Error('Could not read text from PDF');
+      el.loadingText.textContent='generating similar questions...';
+      sys=`You are a CS exam practice generator.
+Given past exam text, generate new questions that are SIMILAR in concept and difficulty but not copied.
+Return ONLY a JSON array of 3-5 items.
+Each item must be: {name,title,starter,steps,topic}
+Rules:
+- starter must include """ YOUR CODE HERE """
+- steps are 2-4 word checkpoint labels (3-6 steps depending on complexity)
+- keep the same subject area and style as the source exam
+- no verbatim copying of original question text`;
+      userContent=`Past exam text (source style):\n${pdfText.slice(0,50000)}\n\nOptional user request/context:\n${raw || '(none provided)'}`;
+    }else{
+      sys=`You receive either (A) pasted homework/code to extract problems from, OR (B) a short topic/practice request only (examples: "give me a question on inheritance", "BST practice problem", "linked lists").
+Rules:
+- Always return ONLY a JSON array (never markdown outside JSON).
+Each item has shape: {name,title,starter,steps,topic}.
+- For (A): extract real problems from the pasted text.
+- For (B): invent ONE plausible CS homework-style practice problem matching the user's topic — include starter skeleton with """ YOUR CODE HERE """ and 3-6 checkpoint step labels.
+- Preserve """ YOUR CODE HERE """ in starter when you create it.
+- Steps: 2-4 word labels, not full instructions. Count: 3 for small, 4-5 medium, 5-6 longer problems.`;
+      userContent=`Input:\n${raw}`;
+    }
+
+    const modelForAnalyze = shouldUseThinkingModelForAnalyze(raw, similarMode) ? THINKING_MODEL : MODEL;
+    const resp=await callAnthropic([{role:'user',content:userContent}],sys,3600,modelForAnalyze);
+    const parsed=parseJsonMaybe(resp);
+    let list;
+    if(Array.isArray(parsed)){list=parsed}
+    else if(parsed&&typeof parsed==='object'){list=[parsed]}
+    else throw new Error('No problems extracted');
+    if(!list.length) throw new Error('No problems extracted');
+    state.problems=list.map((p,i)=>normalizeProblem(p,i));
+  }catch(err){
+    state.problems=[normalizeProblem({},0)];
+  }
+
+  state.solutions=state.problems.map(p=>p.starter||'');
+  state.stepDone=state.problems.map(p=>(p.steps||[]).map(()=>false));
+  state.stepsCache={};
+  state.supportCache={};
+  state.questionDigestCache={};
+  state.liveCache=new Map();
+
+  el.loading.classList.remove('show');
+  toggleNewOverlay(false);
+  el.app.classList.add('show');
+  el.sessionName.textContent=(raw||'new practice').slice(0,58)+((raw||'').length>58?'...':'');
+
+  state.idx=-1;
+  loadProblem(0);
+}
+
+function toggleNewOverlay(show){
+  const on = typeof show==='boolean' ? show : !el.newOverlay.classList.contains('show');
+  el.newOverlay.classList.toggle('show', on);
+  if(on) el.newHwInput.focus();
+}
+
 function goHome(){
   saveCurrentSolution();
   el.app.classList.remove('show');
@@ -1221,6 +1330,23 @@ function bindEvents(){
 
   el.analyzeBtn.onclick=analyzeHomework;
   el.hwInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();analyzeHomework();}});
+
+  el.newSimilarMode.addEventListener('change',()=>{
+    const on=el.newSimilarMode.checked;
+    el.newPickPdfBtn.style.display=on?'inline-block':'none';
+    el.newPdfName.style.display=on?'inline-block':'none';
+  });
+  el.newPickPdfBtn.onclick=()=>el.newExamPdf.click();
+  el.newExamPdf.addEventListener('change',()=>{
+    const f=el.newExamPdf.files && el.newExamPdf.files[0];
+    el.newPdfName.textContent=f?f.name:'no pdf selected';
+  });
+  el.newAnalyzeBtn.onclick=analyzeFromModal;
+  el.newHwInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();analyzeFromModal();}});
+  el.newOverlay.addEventListener('click',(e)=>{
+    if(e.target===el.newOverlay) toggleNewOverlay(false);
+  });
+
   el.goHome.onclick=goHome;
   el.helperModeBtn.onclick=()=>setHelperMode(!state.helperFollow);
   el.helperToggleBtn.onclick=toggleHelperEnabled;
@@ -1242,7 +1368,7 @@ function bindEvents(){
       el.similarMenu.classList.remove('show');
     }
   });
-  el.newBtn.onclick=goHome;
+  el.newBtn.onclick=()=>toggleNewOverlay(true);
   el.questionWinClose.onclick=()=>toggleWindow(el.questionWin,false);
   el.terminalWinClose.onclick=()=>toggleWindow(el.terminalWin,false);
   el.runCodeBtn.onclick=runCodeInTerminal;
