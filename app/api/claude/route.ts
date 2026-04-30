@@ -34,7 +34,12 @@ export async function POST(req: NextRequest) {
   }
 
   const modelOverride = process.env.ANTHROPIC_MODEL?.trim()
-  const outgoing = modelOverride ? { ...bodyRecord, model: modelOverride } : bodyRecord
+  const hasRequestModel = typeof bodyRecord.model === 'string' && bodyRecord.model.trim().length > 0
+  const outgoing = hasRequestModel
+    ? bodyRecord
+    : modelOverride
+      ? { ...bodyRecord, model: modelOverride }
+      : bodyRecord
 
   const upstream = await fetch(ANTHROPIC_URL, {
     method: 'POST',

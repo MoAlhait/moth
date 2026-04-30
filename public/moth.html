@@ -306,6 +306,7 @@ code,pre{font-family:var(--mono)}
 <script>
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
+const THINKING_MODEL='claude-sonnet-4-6';
 
 const state={
   problems:[], idx:0, collapsed:false, sw:268,
@@ -359,11 +360,22 @@ function sanitizePanelHtml(raw){
     .replace(/\sstyle\s*=\s*(['"]).*?\1/gi,'');
 }
 
-async function callAnthropic(messages, system, max_tokens){
-  const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({model:MODEL,max_tokens,system,messages})});
+async function callAnthropic(messages, system, max_tokens, model=MODEL){
+  const r=await fetch(API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({model,max_tokens,system,messages})});
   const d=await r.json();
   if(!r.ok) throw new Error(d.error?.message||r.statusText||'Anthropic request failed');
   return d.content?.[0]?.text||'';
+}
+
+function isLikelyTopicOnlyRequest(raw){
+  const text=(raw||'').trim();
+  if(!text) return false;
+  const hasCodeSignals=/\b(def|class|import|return|while|for|if|elif|else)\b|>>>|{|\n/.test(text);
+  return text.length<=220 && !hasCodeSignals;
+}
+
+function shouldUseThinkingModelForAnalyze(raw, similarMode){
+  return Boolean(similarMode) || isLikelyTopicOnlyRequest(raw);
 }
 
 async function extractPdfText(file){
@@ -1030,7 +1042,7 @@ Previously generated problem titles (avoid repeating):
 ${existing}
 Create one new similar problem.`;
   try{
-    const resp=await callAnthropic([{role:'user',content:user}],sys,2600);
+    const resp=await callAnthropic([{role:'user',content:user}],sys,2600,THINKING_MODEL);
     let obj=parseJsonMaybe(resp);
     if(Array.isArray(obj)){obj=obj[0]}
     appendProblem(obj);
@@ -1081,7 +1093,8 @@ Each item has shape: {name,title,starter,steps,topic}.
       userContent=`Input:\n${raw}`;
     }
 
-    const resp=await callAnthropic([{role:'user',content:userContent}],sys,3600);
+    const modelForAnalyze = shouldUseThinkingModelForAnalyze(raw, similarMode) ? THINKING_MODEL : MODEL;
+    const resp=await callAnthropic([{role:'user',content:userContent}],sys,3600,modelForAnalyze);
     const parsed=parseJsonMaybe(resp);
     let list;
     if(Array.isArray(parsed)){list=parsed}
