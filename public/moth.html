@@ -33,6 +33,12 @@ code,pre{font-family:var(--mono)}
 .card{width:100%;max-width:560px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;overflow:hidden}
 .cardtop{padding:16px}
 .clabel{font:500 10px var(--mono);color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.modeRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.modeToggle{display:flex;align-items:center;gap:8px;color:var(--text2);font-size:12px}
+.modeToggle input{accent-color:var(--cyan)}
+.miniBtn{height:26px;border:1px solid var(--border2);background:var(--bg1);color:var(--text2);padding:0 10px;border-radius:6px;font-size:11px;cursor:pointer}
+.miniBtn:hover{border-color:var(--border3);color:var(--text)}
+.pdfName{font:11px var(--mono);color:var(--text3);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #hwInput{width:100%;min-height:110px;background:transparent;border:none;outline:none;color:var(--text);line-height:1.6;font-size:14px;resize:none}
 #hwInput::placeholder{color:var(--text3)}
 .cardbot{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);background:var(--bg1)}
@@ -159,6 +165,12 @@ code,pre{font-family:var(--mono)}
   <div class="card">
     <div class="cardtop">
       <div class="clabel">homework, or ask for a topic</div>
+      <div class="modeRow">
+        <label class="modeToggle"><input type="checkbox" id="similarMode" /> make similar from past exam (pdf)</label>
+        <button class="miniBtn" id="pickPdfBtn" style="display:none">choose pdf</button>
+        <span class="pdfName" id="pdfName" style="display:none">no pdf selected</span>
+        <input id="examPdf" type="file" accept="application/pdf" style="display:none" />
+      </div>
       <textarea id="hwInput" placeholder="paste a full assignment — or type e.g. &quot;give me a question on inheritance&quot; or &quot;linked list practice&quot;"></textarea>
     </div>
     <div class="cardbot">
@@ -213,6 +225,7 @@ code,pre{font-family:var(--mono)}
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
@@ -229,6 +242,7 @@ const state={
 
 const el={
   home:document.getElementById('home'), app:document.getElementById('app'), hwInput:document.getElementById('hwInput'),
+  similarMode:document.getElementById('similarMode'), examPdf:document.getElementById('examPdf'), pickPdfBtn:document.getElementById('pickPdfBtn'), pdfName:document.getElementById('pdfName'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
   goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), similarBtn:document.getElementById('similarBtn'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
@@ -267,6 +281,22 @@ async function callAnthropic(messages, system, max_tokens){
   const d=await r.json();
   if(!r.ok) throw new Error(d.error?.message||r.statusText||'Anthropic request failed');
   return d.content?.[0]?.text||'';
+}
+
+async function extractPdfText(file){
+  if(!file) throw new Error('Select a PDF first');
+  if(typeof pdfjsLib==='undefined') throw new Error('PDF parser not loaded');
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  const data=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data}).promise;
+  const chunks=[];
+  for(let i=1;i<=pdf.numPages;i++){
+    const page=await pdf.getPage(i);
+    const content=await page.getTextContent();
+    const text=content.items.map(it=>it.str).join(' ');
+    chunks.push(text);
+  }
+  return chunks.join('\n').replace(/\s+\n/g,'\n').trim();
 }
 
 function normalizeProblem(p, idx){
@@ -782,12 +812,33 @@ Create one new similar problem.`;
 
 async function analyzeHomework(){
   const raw=el.hwInput.value.trim();
-  if(!raw){setFeedback('warn','paste homework first');return}
+  const similarMode=Boolean(el.similarMode.checked);
+  if(!raw && !similarMode){setFeedback('warn','paste homework first');return}
 
   el.loading.classList.add('show');
-  el.loadingText.textContent='extracting problems...';
+  el.loadingText.textContent=similarMode?'reading exam pdf...':'extracting problems...';
 
-  const sys=`You receive either (A) pasted homework/code to extract problems from, OR (B) a short topic/practice request only (examples: "give me a question on inheritance", "BST practice problem", "linked lists").
+  try{
+    let sys;
+    let userContent;
+    if(similarMode){
+      const file=el.examPdf.files && el.examPdf.files[0];
+      if(!file) throw new Error('Turned on "make similar" but no PDF selected');
+      const pdfText=await extractPdfText(file);
+      if(!pdfText) throw new Error('Could not read text from PDF');
+      el.loadingText.textContent='generating similar questions...';
+      sys=`You are a CS exam practice generator.
+Given past exam text, generate new questions that are SIMILAR in concept and difficulty but not copied.
+Return ONLY a JSON array of 3-5 items.
+Each item must be: {name,title,starter,steps,topic}
+Rules:
+- starter must include *** YOUR CODE HERE ***
+- steps are 2-4 word checkpoint labels (3-6 steps depending on complexity)
+- keep the same subject area and style as the source exam
+- no verbatim copying of original question text`;
+      userContent=`Past exam text (source style):\n${pdfText.slice(0,50000)}\n\nOptional user request/context:\n${raw || '(none provided)'}`;
+    }else{
+      sys=`You receive either (A) pasted homework/code to extract problems from, OR (B) a short topic/practice request only (examples: "give me a question on inheritance", "BST practice problem", "linked lists").
 Rules:
 - Always return ONLY a JSON array (never markdown outside JSON).
 Each item has shape: {name,title,starter,steps,topic}.
@@ -795,9 +846,10 @@ Each item has shape: {name,title,starter,steps,topic}.
 - For (B): invent ONE plausible CS homework-style practice problem matching the user's topic — include starter skeleton with *** YOUR CODE HERE *** and 3-6 checkpoint step labels.
 - Preserve *** YOUR CODE HERE *** in starter when you create it.
 - Steps: 2-4 word labels, not full instructions. Count: 3 for small, 4-5 medium, 5-6 longer problems.`;
+      userContent=`Input:\n${raw}`;
+    }
 
-  try{
-    const resp=await callAnthropic([{role:'user',content:`Input:\n${raw}`}],sys,3000);
+    const resp=await callAnthropic([{role:'user',content:userContent}],sys,3600);
     const parsed=parseJsonMaybe(resp);
     let list;
     if(Array.isArray(parsed)){list=parsed}
@@ -910,6 +962,17 @@ function initSidebarTabs(){
 }
 
 function bindEvents(){
+  el.similarMode.addEventListener('change',()=>{
+    const on=el.similarMode.checked;
+    el.pickPdfBtn.style.display=on?'inline-block':'none';
+    el.pdfName.style.display=on?'inline-block':'none';
+  });
+  el.pickPdfBtn.onclick=()=>el.examPdf.click();
+  el.examPdf.addEventListener('change',()=>{
+    const f=el.examPdf.files && el.examPdf.files[0];
+    el.pdfName.textContent=f?f.name:'no pdf selected';
+  });
+
   el.analyzeBtn.onclick=analyzeHomework;
   el.hwInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();analyzeHomework();}});
   el.goHome.onclick=goHome;
