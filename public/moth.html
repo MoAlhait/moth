@@ -74,7 +74,7 @@ code,pre{font-family:var(--mono)}
 .gutter{background:var(--bg1);border-right:1px solid var(--border);padding:10px 8px;font:12px/1.75 var(--mono);color:var(--text3);text-align:right;user-select:none;overflow:hidden;white-space:pre}
 .editorPane{position:relative;min-height:0;background:var(--bg)}
 #currentLine{position:absolute;left:0;right:0;height:21px;background:#2C313C;pointer-events:none;z-index:0}
-#editorHl,#editor{position:absolute;inset:0;width:100%;height:100%;padding:10px 12px 40vh 12px;border:none;outline:none;resize:none;overflow:auto;white-space:pre;tab-size:4;font:12px/1.75 var(--mono)}
+#editorHl,#editor{position:absolute;inset:0;width:100%;height:100%;padding:10px 12px 40vh 12px;border:none;outline:none;resize:none;overflow:auto;white-space:pre;tab-size:4;font:12px/1.75 var(--mono);font-variant-ligatures:none;-webkit-font-variant-ligatures:none}
 #editorHl{pointer-events:none;user-select:none;-webkit-user-select:none;color:var(--lav);z-index:1}
 #editor{background:transparent;color:transparent !important;-webkit-text-fill-color:transparent !important;caret-color:var(--caret);z-index:2}
 #editor::selection{background:rgba(62,68,81,.45)}
@@ -221,6 +221,12 @@ code,pre{font-family:var(--mono)}
       <button class="topbtn" id="helperToggleBtn">helper: on</button>
       <button class="topbtn" id="questionBtn">question</button>
       <button class="topbtn" id="terminalBtn">terminal</button>
+      <select class="topbtn" id="similarDifficulty" title="Difficulty for similar question">
+        <option value="easier">easier</option>
+        <option value="same difficulty" selected>same</option>
+        <option value="harder">harder</option>
+        <option value="much harder">much harder</option>
+      </select>
       <button class="topbtn" id="similarBtn" title="Generate a new problem like this one">+ similar</button>
       <button class="topbtn" id="newBtn">+ new</button>
       <button class="topbtn" id="copyBtn">copy</button>
@@ -295,7 +301,7 @@ const el={
   home:document.getElementById('home'), app:document.getElementById('app'), hwInput:document.getElementById('hwInput'),
   similarMode:document.getElementById('similarMode'), examPdf:document.getElementById('examPdf'), pickPdfBtn:document.getElementById('pickPdfBtn'), pdfName:document.getElementById('pdfName'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
-  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), similarBtn:document.getElementById('similarBtn'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
+  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), similarDifficulty:document.getElementById('similarDifficulty'), similarBtn:document.getElementById('similarBtn'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
   fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
   dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), copyBtn:document.getElementById('copyBtn'),
@@ -354,10 +360,24 @@ async function extractPdfText(file){
 }
 
 function normalizeProblem(p, idx){
+  const ensurePlaceholder = (starterRaw) => {
+    let starter = (typeof starterRaw === 'string' ? starterRaw : '').trimEnd();
+    const quoted = '""" YOUR CODE HERE """';
+    if (!starter) return quoted + '\n';
+    if (starter.includes('*** YOUR CODE HERE ***')) {
+      starter = starter.replace(/["']?\*{3}\s*YOUR CODE HERE\s*\*{3}["']?/g, quoted);
+      return starter + '\n';
+    }
+    if (starter.includes('YOUR CODE HERE')) {
+      starter = starter.replace(/"""?\s*YOUR CODE HERE\s*"""?/g, quoted);
+      return starter + '\n';
+    }
+    return starter + '\n\n' + quoted + '\n';
+  };
   return {
     name:p.name||`Q${idx+1}`,
     title:p.title||`Problem ${idx+1}`,
-    starter:typeof p.starter==='string'?p.starter:'# *** YOUR CODE HERE ***\n',
+    starter:ensurePlaceholder(p.starter),
     steps:Array.isArray(p.steps)&&p.steps.length?p.steps:['base case','core logic','return value'],
     topic:p.topic||'general'
   };
@@ -378,7 +398,7 @@ function appendProblem(raw){
 function getQuestionPromptText(p){
   if(!p) return 'Open a problem to see its objective.';
   const checkpoints=(p.steps||[]).map(s=>`- ${s}`).join('\n');
-  return `Build: ${p.title}\nTopic: ${p.topic}\n\nWhat to do:\nImplement the starter code to satisfy the problem behavior and examples.\n\nCheckpoint plan:\n${checkpoints || '- implement core logic'}\n\nStarter:\n${p.starter || '# *** YOUR CODE HERE ***'}`;
+  return `Build: ${p.title}\nTopic: ${p.topic}\n\nWhat to do:\nImplement the starter code to satisfy the problem behavior and examples.\n\nCheckpoint plan:\n${checkpoints || '- implement core logic'}\n\nStarter:\n${p.starter || '""" YOUR CODE HERE """'}`;
 }
 
 async function generateQuestionDigest(i){
@@ -594,7 +614,7 @@ function setEditorFont(px){
 
 function placeCursorUnderPlaceholder(){
   const code=el.editor.value;
-  const marker='*** YOUR CODE HERE ***';
+  const marker='YOUR CODE HERE';
   const markerIdx=code.indexOf(marker);
   if(markerIdx===-1) return;
 
@@ -632,7 +652,8 @@ function placeCursorUnderPlaceholder(){
 }
 
 function applyPlaceholderIndentAtCursor(){
-  const marker='*** YOUR CODE HERE ***';
+  const marker='YOUR CODE HERE';
+  if(el.editor.selectionStart!==el.editor.selectionEnd) return;
   const code=el.editor.value;
   if(!code.includes(marker)) return;
 
@@ -676,9 +697,10 @@ function applyPlaceholderIndentAtCursor(){
   const targetIndent=markerLines[blockIdx].indent;
   const textLine=lines[lineIdx];
   const currentIndent=(textLine.match(/^\s*/)||[''])[0].length;
-  const inLeadingWhitespace=col<=currentIndent;
-  const isWhitespaceLine=textLine.trim()==='';
-  if(!(inLeadingWhitespace || isWhitespaceLine || col<=targetIndent)) return;
+    const inLeadingWhitespace=col<=currentIndent;
+    const isWhitespaceLine=textLine.trim()==='';
+    if(!(inLeadingWhitespace || isWhitespaceLine || col<=targetIndent)) return;
+    if(currentIndent>=targetIndent) return;
 
   if(currentIndent<targetIndent){
     const missing=' '.repeat(targetIndent-currentIndent);
@@ -943,7 +965,7 @@ function loadProblem(i){
   renderChips();
   renderQuestionPrompt();
   generateQuestionDigest(i);
-  setFeedback('info','write under *** YOUR CODE HERE *** and pause for feedback');
+  setFeedback('info','write under """ YOUR CODE HERE """ and pause for feedback');
 
   generateStepsPanel(i);
   generateSupportPanels(i);
@@ -953,22 +975,27 @@ async function generateSimilarQuestion(){
   if(!state.problems.length) return;
   saveCurrentSolution();
   const p=state.problems[state.idx];
+  const diff = el.similarDifficulty.value || 'same difficulty';
+  const existing = state.problems.map((q,i)=>`${i+1}. ${q.title}`).join('\n');
   el.similarBtn.disabled=true;
   setFeedback('info','generating a similar question...');
   const sys=`Return ONLY a single JSON object (not an array) for ONE new practice problem.
 Fields: {name,title,starter,steps,topic}.
 - name: short tab label
 - title: full problem title
-- starter: Python starter with *** YOUR CODE HERE *** where student types
+- starter: Python starter with """ YOUR CODE HERE """ where student types
 - steps: 2-4 word checkpoint labels, 3-6 items
 - topic: CS concept
-The new problem must test the SAME skills and difficulty as the reference, but use different names, data, and details (not a copy).`;
+The new problem must test the SAME skills as the reference, use requested difficulty, and be materially different from previously generated questions. Do not repeat prior prompts or titles.`;
   const user=`Reference problem to vary (not copy):
 title: ${p.title}
 topic: ${p.topic}
 checkpoints: ${(p.steps||[]).join(', ')}
 starter template (invent a new scenario, new function names):
 ${p.starter}
+Requested difficulty: ${diff}
+Previously generated problem titles (avoid repeating):
+${existing}
 Create one new similar problem.`;
   try{
     const resp=await callAnthropic([{role:'user',content:user}],sys,2600);
@@ -1005,7 +1032,7 @@ Given past exam text, generate new questions that are SIMILAR in concept and dif
 Return ONLY a JSON array of 3-5 items.
 Each item must be: {name,title,starter,steps,topic}
 Rules:
-- starter must include *** YOUR CODE HERE ***
+- starter must include """ YOUR CODE HERE """
 - steps are 2-4 word checkpoint labels (3-6 steps depending on complexity)
 - keep the same subject area and style as the source exam
 - no verbatim copying of original question text`;
@@ -1016,8 +1043,8 @@ Rules:
 - Always return ONLY a JSON array (never markdown outside JSON).
 Each item has shape: {name,title,starter,steps,topic}.
 - For (A): extract real problems from the pasted text.
-- For (B): invent ONE plausible CS homework-style practice problem matching the user's topic — include starter skeleton with *** YOUR CODE HERE *** and 3-6 checkpoint step labels.
-- Preserve *** YOUR CODE HERE *** in starter when you create it.
+- For (B): invent ONE plausible CS homework-style practice problem matching the user's topic — include starter skeleton with """ YOUR CODE HERE """ and 3-6 checkpoint step labels.
+- Preserve """ YOUR CODE HERE """ in starter when you create it.
 - Steps: 2-4 word labels, not full instructions. Count: 3 for small, 4-5 medium, 5-6 longer problems.`;
       userContent=`Input:\n${raw}`;
     }
