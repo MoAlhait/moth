@@ -1259,6 +1259,22 @@ function onEditorKeyDown(e){
   const v=el.editor.value;
   const s=el.editor.selectionStart;
   const ee=el.editor.selectionEnd;
+  const isShift3Comment = (e.shiftKey && (e.key==='#' || e.code==='Digit3'));
+
+  if(isShift3Comment && s!==ee){
+    e.preventDefault();
+    const lineStart=v.lastIndexOf('\n',s-1)+1;
+    const from=Math.max(0,ee-1);
+    const lineEndIdx=v.indexOf('\n',from);
+    const lineEnd=lineEndIdx===-1?v.length:lineEndIdx;
+    const block=v.slice(lineStart,lineEnd);
+    const commented=block.split('\n').map(line=>`# ${line}`).join('\n');
+    el.editor.value=v.slice(0,lineStart)+commented+v.slice(lineEnd);
+    el.editor.selectionStart=lineStart;
+    el.editor.selectionEnd=lineStart+commented.length;
+    onEditorInput();
+    return;
+  }
 
   if(e.key==='Tab'){
     e.preventDefault();
