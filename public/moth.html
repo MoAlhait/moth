@@ -168,7 +168,7 @@ code,pre{font-family:var(--mono)}
 .collapsed .rcol{display:none}
 .popWin{
   position:absolute; z-index:8; background:rgba(33,37,43,.98); border:1px solid var(--border2); border-radius:10px;
-  box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden; display:none; resize:both;
+  box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden; display:none; resize:both; flex-direction:column;
 }
 .popWin.show{display:block}
 .popHead{
@@ -179,10 +179,13 @@ code,pre{font-family:var(--mono)}
 .popHead .closeBtn{
   border:1px solid var(--border2); background:var(--bg2); color:var(--text2); border-radius:6px; font-size:11px; padding:2px 7px; cursor:pointer;
 }
-.popBody{padding:10px; overflow:auto}
-#terminalOutput{background:#11151c;border:1px solid var(--border2);border-radius:8px;padding:10px;white-space:pre-wrap;min-height:140px;max-height:320px;overflow:auto;color:#ABB2BF;font:12px/1.5 var(--mono)}
+.popWin.show{display:flex}
+.popBody{padding:10px; overflow:auto; flex:1; min-height:0}
+#terminalWin .popBody{display:flex;flex-direction:column;gap:8px;overflow:hidden}
+#terminalOutput{background:#11151c;border:1px solid var(--border2);border-radius:8px;padding:10px;white-space:pre-wrap;min-height:0;overflow:auto;color:#ABB2BF;font:12px/1.5 var(--mono);flex:1}
 .termRow{display:flex;gap:8px;margin-top:8px}
 .termBtn{height:28px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);padding:0 10px;border-radius:7px;font-size:12px;cursor:pointer}
+.questionText{white-space:pre-wrap;font:13px/1.6 var(--sans);color:var(--text);margin:0}
 </style>
 </head>
 <body>
@@ -280,7 +283,7 @@ const state={
   problems:[], idx:0, collapsed:false, sw:268,
   lastLineCount:1, feedbackTimer:null, liveCache:new Map(),
   solutions:[], stepDone:[],
-  stepsCache:{}, supportCache:{},
+  stepsCache:{}, supportCache:{}, questionDigestCache:{},
   baseFont:23,
   helperEnabled:true,
   helperFollow:true,
@@ -378,12 +381,37 @@ function getQuestionPromptText(p){
   return `Build: ${p.title}\nTopic: ${p.topic}\n\nWhat to do:\nImplement the starter code to satisfy the problem behavior and examples.\n\nCheckpoint plan:\n${checkpoints || '- implement core logic'}\n\nStarter:\n${p.starter || '# *** YOUR CODE HERE ***'}`;
 }
 
+async function generateQuestionDigest(i){
+  const p=state.problems[i];
+  if(!p) return;
+  if(state.questionDigestCache[i]) return;
+  const fallback=`Goal: Implement ${p.title}.\n\nPlain English:\nWrite the function/class so it behaves like the examples and satisfies each checkpoint.\n\nCheckpoints:\n${(p.steps||[]).map(s=>`- ${s}`).join('\n')}`;
+  state.questionDigestCache[i]=fallback;
+  if(i===state.idx) renderQuestionPrompt();
+  try{
+    const sys=`You are a CS tutor. Rewrite the coding question in very clear plain English for a student.
+Output plain text only, with sections:
+- Goal
+- What you need to implement
+- Inputs/outputs
+- Constraints to watch
+- Suggested first 3 steps
+Keep concise and actionable. Do NOT provide full solution code.`;
+    const user=`Title: ${p.title}\nTopic: ${p.topic}\nStarter:\n${p.starter}\nCheckpoints: ${(p.steps||[]).join(', ')}`;
+    const resp=await callAnthropic([{role:'user',content:user}],sys,500);
+    const text=String(resp||'').replace(/```/g,'').trim();
+    if(text) state.questionDigestCache[i]=text;
+    if(i===state.idx) renderQuestionPrompt();
+  }catch{}
+}
+
 function renderQuestionPrompt(){
   const p=state.problems[state.idx];
-  const prompt=getQuestionPromptText(p);
-  const short=prompt.split('\n').slice(0,3).join(' ').slice(0,220);
+  const prompt=state.questionDigestCache[state.idx] || getQuestionPromptText(p);
+  const short=prompt.split('\n').slice(0,2).join(' ').slice(0,240);
   el.questionInline.textContent=short + (short.length>=220?'…':'');
-  el.questionWinBody.innerHTML=`<pre style="white-space:pre-wrap;font:12px/1.55 var(--mono);color:var(--text);margin:0;">${escapeHtml(prompt)}</pre>`;
+  el.questionWinBody.innerHTML=`<pre class="questionText">${escapeHtml(prompt)}</pre>`;
+  updateWindowScaledText(el.questionWin);
 }
 
 function toggleHelperEnabled(){
@@ -415,6 +443,24 @@ function makeWindowMovable(win, head){
     win.style.top=y+'px';
   });
   document.addEventListener('mouseup',()=>{dragging=false;});
+}
+
+function updateWindowScaledText(win){
+  const w=win.offsetWidth||480;
+  const h=win.offsetHeight||260;
+  if(win===el.terminalWin){
+    const size=Math.max(12,Math.min(36,Math.min(w*0.035,h*0.06)));
+    el.terminalOutput.style.fontSize=size+'px';
+    el.terminalOutput.style.lineHeight=(size*1.45)+'px';
+    return;
+  }
+  if(win===el.questionWin){
+    const q=el.questionWinBody.querySelector('.questionText');
+    if(!q) return;
+    const size=Math.max(12,Math.min(34,Math.min(w*0.032,h*0.055)));
+    q.style.fontSize=size+'px';
+    q.style.lineHeight=(size*1.5)+'px';
+  }
 }
 
 async function ensurePyodide(){
@@ -896,6 +942,7 @@ function loadProblem(i){
   el.editor.focus();
   renderChips();
   renderQuestionPrompt();
+  generateQuestionDigest(i);
   setFeedback('info','write under *** YOUR CODE HERE *** and pause for feedback');
 
   generateStepsPanel(i);
@@ -991,6 +1038,7 @@ Each item has shape: {name,title,starter,steps,topic}.
   state.stepDone=state.problems.map(p=>(p.steps||[]).map(()=>false));
   state.stepsCache={};
   state.supportCache={};
+  state.questionDigestCache={};
   state.liveCache=new Map();
 
   el.loading.classList.remove('show');
@@ -1183,6 +1231,8 @@ function bindEvents(){
   renderQuestionPrompt();
   makeWindowMovable(el.questionWin, el.questionWinHead);
   makeWindowMovable(el.terminalWin, el.terminalWinHead);
+  updateWindowScaledText(el.questionWin);
+  updateWindowScaledText(el.terminalWin);
 
   if(typeof ResizeObserver !== 'undefined'){
     state.helperResizeObserver = new ResizeObserver(()=>{
@@ -1190,6 +1240,12 @@ function bindEvents(){
       updateFloatingFeedbackPosition();
     });
     state.helperResizeObserver.observe(el.fbFloat);
+    const popObserver = new ResizeObserver(()=>{
+      updateWindowScaledText(el.questionWin);
+      updateWindowScaledText(el.terminalWin);
+    });
+    popObserver.observe(el.questionWin);
+    popObserver.observe(el.terminalWin);
   }
 }
 
