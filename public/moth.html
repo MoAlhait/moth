@@ -129,6 +129,17 @@ code,pre{font-family:var(--mono)}
 .chip{padding:4px 9px;border-radius:999px;border:1px solid var(--border2);font:11px var(--mono);white-space:nowrap;color:var(--text3);background:var(--bg1)}
 .chip.done{color:var(--green);border-color:rgba(52,211,153,.45);background:rgba(52,211,153,.12)}
 .chip.next{color:var(--cyan);border-color:rgba(56,189,248,.45);background:rgba(56,189,248,.12)}
+.questionInline{
+  min-height:34px;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  background:rgba(33,37,43,.8);
+  color:var(--text2);
+  font-size:12px;
+  line-height:1.45;
+  padding:8px 12px;
+  white-space:normal;
+}
 
 .handle{position:relative;background:var(--border);cursor:col-resize}
 .handle:hover{background:var(--border3)}
@@ -155,6 +166,23 @@ code,pre{font-family:var(--mono)}
 
 .collapsed{grid-template-columns:1fr 4px 0px}
 .collapsed .rcol{display:none}
+.popWin{
+  position:absolute; z-index:8; background:rgba(33,37,43,.98); border:1px solid var(--border2); border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden; display:none; resize:both;
+}
+.popWin.show{display:block}
+.popHead{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  background:var(--bg3); border-bottom:1px solid var(--border); padding:7px 10px; cursor:move;
+  font:11px var(--mono); color:var(--text2);
+}
+.popHead .closeBtn{
+  border:1px solid var(--border2); background:var(--bg2); color:var(--text2); border-radius:6px; font-size:11px; padding:2px 7px; cursor:pointer;
+}
+.popBody{padding:10px; overflow:auto}
+#terminalOutput{background:#11151c;border:1px solid var(--border2);border-radius:8px;padding:10px;white-space:pre-wrap;min-height:140px;max-height:320px;overflow:auto;color:#ABB2BF;font:12px/1.5 var(--mono)}
+.termRow{display:flex;gap:8px;margin-top:8px}
+.termBtn{height:28px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);padding:0 10px;border-radius:7px;font-size:12px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -187,6 +215,9 @@ code,pre{font-family:var(--mono)}
     <div class="right">
       <span class="sizelbl">size</span><input id="fontSlider" type="range" min="10" max="24" step="1" value="23" />
       <button class="topbtn" id="helperModeBtn">helper: follow</button>
+      <button class="topbtn" id="helperToggleBtn">helper: on</button>
+      <button class="topbtn" id="questionBtn">question</button>
+      <button class="topbtn" id="terminalBtn">terminal</button>
       <button class="topbtn" id="similarBtn" title="Generate a new problem like this one">+ similar</button>
       <button class="topbtn" id="newBtn">+ new</button>
       <button class="topbtn" id="copyBtn">copy</button>
@@ -195,6 +226,7 @@ code,pre{font-family:var(--mono)}
   <div class="layout" id="layout">
     <div class="ecol">
       <div class="tabs" id="ptabs"></div>
+      <div class="questionInline" id="questionInline">Open a problem to see what to build.</div>
       <div class="editorwrap">
         <div class="gutter" id="gutter">1</div>
         <div class="editorPane" id="editorPane">
@@ -223,6 +255,20 @@ code,pre{font-family:var(--mono)}
       <div class="rpanel" id="refPanel"></div>
     </div>
   </div>
+  <div class="popWin" id="questionWin" style="left:72px;top:74px;width:480px;height:260px;">
+    <div class="popHead" id="questionWinHead"><span>question prompt</span><button class="closeBtn" id="questionWinClose">close</button></div>
+    <div class="popBody" id="questionWinBody"></div>
+  </div>
+  <div class="popWin" id="terminalWin" style="left:120px;top:120px;width:520px;height:320px;">
+    <div class="popHead" id="terminalWinHead"><span>python terminal</span><button class="closeBtn" id="terminalWinClose">close</button></div>
+    <div class="popBody">
+      <div id="terminalOutput">Run current editor code to see output.</div>
+      <div class="termRow">
+        <button class="termBtn" id="runCodeBtn">run current tab</button>
+        <button class="termBtn" id="clearTermBtn">clear</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -236,18 +282,23 @@ const state={
   solutions:[], stepDone:[],
   stepsCache:{}, supportCache:{},
   baseFont:23,
+  helperEnabled:true,
   helperFollow:true,
-  helperResizeObserver:null
+  helperResizeObserver:null,
+  pyodide:null
 };
 
 const el={
   home:document.getElementById('home'), app:document.getElementById('app'), hwInput:document.getElementById('hwInput'),
   similarMode:document.getElementById('similarMode'), examPdf:document.getElementById('examPdf'), pickPdfBtn:document.getElementById('pickPdfBtn'), pdfName:document.getElementById('pdfName'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
-  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), similarBtn:document.getElementById('similarBtn'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
+  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), similarBtn:document.getElementById('similarBtn'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
   fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
-  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), copyBtn:document.getElementById('copyBtn'),
+  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), copyBtn:document.getElementById('copyBtn'),
+  questionWin:document.getElementById('questionWin'), questionWinHead:document.getElementById('questionWinHead'), questionWinBody:document.getElementById('questionWinBody'), questionWinClose:document.getElementById('questionWinClose'),
+  terminalWin:document.getElementById('terminalWin'), terminalWinHead:document.getElementById('terminalWinHead'), terminalWinClose:document.getElementById('terminalWinClose'), terminalOutput:document.getElementById('terminalOutput'),
+  runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
   fontSlider:document.getElementById('fontSlider'), layout:document.getElementById('layout'), handle:document.getElementById('handle'), collapse:document.getElementById('collapse'),
   rtabs:document.getElementById('rtabs'), hintsPanel:document.getElementById('hintsPanel'), stepsPanel:document.getElementById('stepsPanel'),
   syntaxPanel:document.getElementById('syntaxPanel'), gotchasPanel:document.getElementById('gotchasPanel'), refPanel:document.getElementById('refPanel')
@@ -321,10 +372,84 @@ function appendProblem(raw){
   loadProblem(idx);
 }
 
+function getQuestionPromptText(p){
+  if(!p) return 'Open a problem to see its objective.';
+  const checkpoints=(p.steps||[]).map(s=>`- ${s}`).join('\n');
+  return `Build: ${p.title}\nTopic: ${p.topic}\n\nWhat to do:\nImplement the starter code to satisfy the problem behavior and examples.\n\nCheckpoint plan:\n${checkpoints || '- implement core logic'}\n\nStarter:\n${p.starter || '# *** YOUR CODE HERE ***'}`;
+}
+
+function renderQuestionPrompt(){
+  const p=state.problems[state.idx];
+  const prompt=getQuestionPromptText(p);
+  const short=prompt.split('\n').slice(0,3).join(' ').slice(0,220);
+  el.questionInline.textContent=short + (short.length>=220?'…':'');
+  el.questionWinBody.innerHTML=`<pre style="white-space:pre-wrap;font:12px/1.55 var(--mono);color:var(--text);margin:0;">${escapeHtml(prompt)}</pre>`;
+}
+
+function toggleHelperEnabled(){
+  state.helperEnabled=!state.helperEnabled;
+  el.helperToggleBtn.textContent=state.helperEnabled?'helper: on':'helper: off';
+  el.fbFloat.style.display=state.helperEnabled?'block':'none';
+  el.fbmsg.textContent=state.helperEnabled?el.fbmsg.textContent:'helper disabled';
+}
+
+function toggleWindow(win, force){
+  const show = typeof force==='boolean' ? force : !win.classList.contains('show');
+  win.classList.toggle('show', show);
+}
+
+function makeWindowMovable(win, head){
+  let dragging=false, dx=0, dy=0;
+  head.addEventListener('mousedown',e=>{
+    dragging=true;
+    const r=win.getBoundingClientRect();
+    dx=e.clientX-r.left; dy=e.clientY-r.top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!dragging) return;
+    const pane=el.app.getBoundingClientRect();
+    const x=Math.max(8,Math.min(pane.width-win.offsetWidth-8,e.clientX-pane.left-dx));
+    const y=Math.max(48,Math.min(pane.height-win.offsetHeight-8,e.clientY-pane.top-dy));
+    win.style.left=x+'px';
+    win.style.top=y+'px';
+  });
+  document.addEventListener('mouseup',()=>{dragging=false;});
+}
+
+async function ensurePyodide(){
+  if(state.pyodide) return state.pyodide;
+  if(typeof window.loadPyodide!=='function'){
+    await new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+      s.onload=resolve; s.onerror=()=>reject(new Error('pyodide load failed'));
+      document.head.appendChild(s);
+    });
+  }
+  state.pyodide=await window.loadPyodide({indexURL:'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/'});
+  return state.pyodide;
+}
+
+async function runCodeInTerminal(){
+  toggleWindow(el.terminalWin,true);
+  el.terminalOutput.textContent='Loading Python runtime...';
+  try{
+    const py=await ensurePyodide();
+    py.globals.set('USER_CODE', el.editor.value || '');
+    await py.runPythonAsync(`import io, sys, traceback\n_buf=io.StringIO(); _err=io.StringIO()\n_oldo,_olde=sys.stdout,sys.stderr\nsys.stdout,sys.stderr=_buf,_err\ntry:\n    exec(USER_CODE, {})\nexcept Exception:\n    traceback.print_exc(file=_err)\nfinally:\n    sys.stdout,sys.stderr=_oldo,_olde\nRUN_OUTPUT=_buf.getvalue()+_err.getvalue()`);
+    const out=py.globals.get('RUN_OUTPUT');
+    el.terminalOutput.textContent=(out && String(out).trim()) ? String(out) : '(no output)';
+  }catch(err){
+    el.terminalOutput.textContent='Run failed: '+String(err.message||err);
+  }
+}
+
 function setFeedback(status,msg){
   const colors={ok:'var(--green)',warn:'var(--amber)',info:'var(--cyan)',err:'var(--red)'};
   el.dot.style.background=colors[status]||'var(--text3)';
   el.fbmsg.textContent=msg;
+  if(!state.helperEnabled) return;
   el.fbFloat.className='';
   el.fbFloat.classList.add(status||'info','show');
   el.fbFloatBody.textContent=msg;
@@ -770,6 +895,7 @@ function loadProblem(i){
   placeCursorUnderPlaceholder();
   el.editor.focus();
   renderChips();
+  renderQuestionPrompt();
   setFeedback('info','write under *** YOUR CODE HERE *** and pause for feedback');
 
   generateStepsPanel(i);
@@ -977,8 +1103,15 @@ function bindEvents(){
   el.hwInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();analyzeHomework();}});
   el.goHome.onclick=goHome;
   el.helperModeBtn.onclick=()=>setHelperMode(!state.helperFollow);
+  el.helperToggleBtn.onclick=toggleHelperEnabled;
+  el.questionBtn.onclick=()=>{ renderQuestionPrompt(); toggleWindow(el.questionWin); };
+  el.terminalBtn.onclick=()=>toggleWindow(el.terminalWin);
   el.similarBtn.onclick=generateSimilarQuestion;
   el.newBtn.onclick=goHome;
+  el.questionWinClose.onclick=()=>toggleWindow(el.questionWin,false);
+  el.terminalWinClose.onclick=()=>toggleWindow(el.terminalWin,false);
+  el.runCodeBtn.onclick=runCodeInTerminal;
+  el.clearTermBtn.onclick=()=>{el.terminalOutput.textContent='(cleared)';};
 
   el.fontSlider.oninput=()=>setEditorFont(Number(el.fontSlider.value));
   setEditorFont(23);
@@ -1047,6 +1180,9 @@ function bindEvents(){
 
   setHelperMode(true);
   setFeedback('info',el.fbmsg.textContent||'pick a problem and start typing');
+  renderQuestionPrompt();
+  makeWindowMovable(el.questionWin, el.questionWinHead);
+  makeWindowMovable(el.terminalWin, el.terminalWinHead);
 
   if(typeof ResizeObserver !== 'undefined'){
     state.helperResizeObserver = new ResizeObserver(()=>{
