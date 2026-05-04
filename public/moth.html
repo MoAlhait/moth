@@ -187,6 +187,12 @@ code,pre{font-family:var(--mono)}
 .refCode{display:block;margin:12px 0 18px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;overflow:auto;font:12px/1.65 var(--mono);color:var(--text);line-height:1.65}
 .refBullets{margin:4px 0 16px;padding-left:22px;color:var(--text2)}
 .refBullets li{margin-bottom:12px;line-height:1.75}
+.synSimple{display:block}
+.synSimple .synItem{margin:0 0 22px;padding:0 0 20px;border-bottom:1px solid var(--border)}
+.synSimple .synItem:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.synKw{font:600 13px var(--mono);color:var(--cyan);margin:0 0 10px;letter-spacing:.03em}
+.synDef{margin:0;font-size:14px;line-height:1.75;color:var(--text2)}
+.synEx{margin:10px 0 0;font:12px/1.55 var(--mono);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;overflow:auto;color:var(--text)}
 .refDoc .refSection > *{margin-top:0}
 .refDoc .refSection > * + *{margin-top:14px}
 .refDoc .refSection > h3 + *{margin-top:0}
@@ -393,7 +399,7 @@ code,pre{font-family:var(--mono)}
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
 const THINKING_MODEL='claude-sonnet-4-6';
-const PANEL_CACHE_VER=3;
+const PANEL_CACHE_VER=4;
 
 const state={
   problems:[], idx:0, collapsed:false, sw:268,
@@ -1039,7 +1045,7 @@ function renderSupportFallback(i){
   const steps=(p.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('');
   const fallback={
     hints:`<div class="cardx"><h4>Focus</h4><p>Work <strong>checkpoint-by-checkpoint</strong> for <code>${escapeHtml(p.name||'Q')}</code>.</p></div><div class="cardx"><h4>Starter first</h4><p>Fill placeholders before refactoring. Keep <strong>function signatures</strong> intact.</p></div><div class="cardx"><h4>Test mentally</h4><p>Walk through a <strong>tiny input</strong> after each edit to confirm state changes.</p></div><div class="cardx"><h4>Edge cases</h4><p>Check <strong>empty</strong> inputs, minimum boundaries, and stop conditions.</p></div>`,
-    syntax:`<div class="refDoc syntaxRef"><section class="refSection"><h3>Conditionals</h3><p class="refLead">Use <strong>if</strong> / <strong>elif</strong> / <strong>else</strong> to branch. The first true condition runs its block.</p><pre class="refCode">if x &lt; 0:\n    return 0\nelif x &gt; 100:\n    return 100\nreturn x</pre></section><section class="refSection"><h3>Loops</h3><p class="refLead"><strong>for</strong> iterates a sequence; <strong>while</strong> repeats while a condition holds.</p><pre class="refCode">for item in items:\n    process(item)\n\nwhile n &gt; 0:\n    n -= 1</pre></section><section class="refSection"><h3>Functions</h3><p class="refLead"><strong>def</strong> defines callable code. Parameters receive arguments by position or name.</p><pre class="refCode">def add(a, b=0):\n    return a + b</pre></section><section class="refSection"><h3>Comprehensions</h3><p class="refLead">Build lists/dicts/sets in one expression with optional <strong>if</strong> filter.</p><pre class="refCode">squares = [x*x for x in range(10) if x % 2 == 0]</pre></section></div>`,
+    syntax:`<div class="refDoc syntaxRef synSimple"><div class="synItem"><div class="synKw">SELECT</div><p class="synDef">Starts what you want in the result: column names, expressions, or literals. Usually the first clause in a query.</p></div><div class="synItem"><div class="synKw">*</div><p class="synDef">Right after <code>SELECT</code>, <strong>*</strong> means <strong>all columns</strong> from the table(s) listed in <code>FROM</code>.</p></div><div class="synItem"><div class="synKw">FROM</div><p class="synDef">Names the table you read rows from. Extra tables are often added with <code>JOIN</code>.</p></div><div class="synItem"><div class="synKw">WHERE</div><p class="synDef">Keeps only rows that match a condition, evaluated <strong>per row</strong> before any grouping.</p></div><div class="synItem"><div class="synKw">JOIN … ON</div><p class="synDef">Combines two tables by matching keys in the <code>ON</code> condition. <code>INNER JOIN</code> drops non-matching rows from both sides.</p></div><div class="synItem"><div class="synKw">GROUP BY</div><p class="synDef">Merges rows that share the same values in the listed columns so you can use aggregates (<code>COUNT</code>, <code>SUM</code>, …).</p></div><div class="synItem"><div class="synKw">HAVING</div><p class="synDef">Filters <strong>after</strong> <code>GROUP BY</code>, usually on aggregate results (e.g. only groups where <code>COUNT(*)</code> is above a limit).</p></div><div class="synItem"><div class="synKw">ORDER BY</div><p class="synDef">Sorts the final rows. Does not remove rows; only changes display order.</p></div><div class="synItem"><div class="synKw">def (Python)</div><p class="synDef">Defines a function. Code inside is indented under the header.</p></div><div class="synItem"><div class="synKw">return (Python)</div><p class="synDef">Sends a value back to the caller and ends the function run at that point.</p></div></div>`,
     gotchas:`<div class="cardx warn"><h4>Off-by-one</h4><p>Compare indices and ranges carefully. Use <strong>&lt;</strong> vs <strong>&lt;=</strong> consistently with how you index.</p></div><div class="cardx warn"><h4>State reset</h4><p>Reset accumulators and iterators in the right place so <strong>each call</strong> starts from a known state.</p></div><div class="cardx warn"><h4>Return timing</h4><p>Save values you still need <strong>before</strong> you mutate variables that held them.</p></div><div class="cardx tip"><h4>Checkpoints</h4><p>Map each chip to one small slice of code so progress stays visible.</p></div><div class="cardx tip"><h4>Small tests</h4><p>After each edit, trace <strong>one tiny example</strong> by hand.</p></div><div class="cardx tip"><h4>Incremental build</h4><p>Get one path working first, then generalize.</p></div>`,
     ref:`<div class="refSheet"><h3>Current problem</h3><p><code>${escapeHtml(p.title||'Problem')}</code></p><h3>Checkpoint plan</h3><ul>${steps || '<li>Implement core logic</li>'}</ul><h3>Mental model</h3><p>Each checkpoint is a <strong>small verifiable unit</strong>. Finish one before leaning on the next.</p></div>`
   };
@@ -1069,31 +1075,31 @@ async function generateSupportPanels(i){
   try{
     const baseCtx=`Title: ${p.title}\nTopic: ${p.topic}\nStarter (context only — do not quote verbatim as a solution):\n${p.starter}`;
     const fullCtx=`${baseCtx}\nCheckpoints: ${(p.steps||[]).join(', ')}`;
-    const syntaxSys='You author Python-only language reference sheets (W3Schools / exam cheat-sheet style): builtins, statements, stdlib, and string/SQL embedding patterns in Python. Never teach the homework SQL logic, never name tables/columns/functions copied from the student starter, never walk checkpoints. If the assignment embeds SQL in Python, teach Python side only (strings, triple quotes, f-strings, .format, parameters, cursor.execute patterns with placeholders) using toy names like books, orders, customers — not their schema.';
+    const syntaxSys='You write ultra-short open-book style syntax sheets: one keyword or clause name, then one or two plain English sentences explaining what it does (like a printed exam reference). No storytelling, no homework solutions, no checkpoint names, no identifiers copied from the student starter.';
     const syntaxUser=`${baseCtx}
 
-Return HTML only inside ONE wrapper:
-<div class="refDoc syntaxRef"> ... </div>
+Return HTML only inside this wrapper (include class synSimple):
+<div class="refDoc syntaxRef synSimple"> ... </div>
 
-This must be a Python language and library reference for concepts relevant to the TOPIC (infer from title/topic: e.g. embedded SQL exercises → Python strings, multiline strings, f-strings, .strip, .split, formatting; OOP homework → class, self, super, properties; iterators → yield, iter, next).
+Style: like a simple reference sheet — e.g. "SELECT does …", "WHERE does …", "* means …".
 
-Include 6–10 sections, each exactly:
-<section class="refSection">
-  <h3>Short feature name</h3>
-  <p class="refLead">1–2 sentences. Use strong tags around important terms (open and close).</p>
-  <pre class="refCode">minimal correct Python example</pre>
-  <ul class="refBullets"><li>optional</li></ul>
-</section>
-Omit the ul block entirely when bullets are not needed.
+Each entry is exactly (synEx is optional; if used, put it AFTER the closing p, never inside the p):
+<div class="synItem">
+  <div class="synKw">SHORT LABEL</div>
+  <p class="synDef">1–2 short sentences in plain English. Use strong tags around important words.</p>
+</div>
 
-Hard rules:
-- Do not name checkpoint labels. Do not reference identifiers from the starter (table names, column names, function names, string literals from their template). Use neutral toy data in examples.
-- Do not write SQL that solves their assignment. If you show SQL inside Python strings, it must be generic (SELECT * FROM books) not their schema.
-- No markdown. HTML only: div, section, h3, p, strong, em, code, pre, ul, li, br.
-- Every section must use the refSection wrapper so spacing stays consistent.`;
+Choose the language to explain:
+- If the problem clearly involves reading or writing SQL (SQL, query, SELECT, database, JOIN, etc. in title/topic/starter), at least 9 entries MUST be SQL clauses/keywords in this order when possible: SELECT, * (explain under SELECT), FROM, WHERE, JOIN or INNER JOIN + ON, GROUP BY, HAVING, ORDER BY, AS (aliases). Each synKw is the clause name (e.g. "SELECT", "*", "WHERE"). Explain * as "all columns" after SELECT.
+- Otherwise use Python keywords/constructs the same way (def, return, if, elif, else, for, while, in, with, import, etc.) — still one synItem per keyword.
+
+Rules:
+- Do not use table/column/function names from their starter. Toy names only (books, customers, orders) if you need an example.
+- No checkpoint labels. No full assignment solution.
+- No markdown. Allowed tags: div, p, strong, em, code, pre, br only (plus the classes above).`;
     const [hintsRaw, syntaxRaw, gotchasRaw, refRaw] = await Promise.all([
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 4 hint cards as HTML only. Each: <div class="cardx"><h4>TITLE</h4><p>BODY</p></div>. Strategy only: use <strong> for critical terms. Use </p><p> between separate ideas for air. Do not paste SQL that references their tables/columns; do not give a full solution.`}], 'You are a CS tutor.', 750),
-      callAnthropic([{role:'user',content:syntaxUser}], syntaxSys, 1600),
+      callAnthropic([{role:'user',content:syntaxUser}], syntaxSys, 1400),
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 6 gotcha/tip cards as HTML only. Use <div class="cardx warn"> or <div class="cardx tip">, each with <h4> then <p>. Put the main idea in <strong> in the first sentence. Use </p><p> between ideas for vertical space. Avoid pasting their exact SQL or naming their specific tables; speak in general patterns (joins, HAVING vs WHERE, grouping) unless naming is unavoidable.`}], 'You are a CS tutor.', 900),
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate concise reference HTML wrapped in <div class="refSheet">. Sections with <h3>: Core concept, Working plan, Common pitfalls, Mental model. Use <p> with <strong> for key terms; <ul><li> for lists; <code> for identifiers. No markdown markers. Generous vertical spacing: one clear idea per paragraph.`}], 'You are a CS tutor.', 950),
     ]);
