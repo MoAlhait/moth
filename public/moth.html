@@ -353,7 +353,8 @@ const state={
   helperEnabled:true,
   helperFollow:true,
   helperResizeObserver:null,
-  pyodide:null
+  pyodide:null,
+  editHist:{undos:[], redos:[], timer:null, max:200}
 };
 
 const el={
@@ -735,6 +736,9 @@ function placeCursorUnderPlaceholder(){
   el.editor.selectionStart=el.editor.selectionEnd=target;
   updateGutterIfLineCountChanged(el.editor.value);
   renderHighlight();
+  syncGutterToEditorScroll();
+  onEditorInput();
+  commitEditHistoryNow();
 }
 
 function applyPlaceholderIndentAtCursor(){
@@ -801,6 +805,9 @@ function applyPlaceholderIndentAtCursor(){
   const targetPos=newLineStart+targetIndent;
   el.editor.selectionStart=el.editor.selectionEnd=targetPos;
   updateCurrentLine();
+  syncGutterToEditorScroll();
+  onEditorInput();
+  commitEditHistoryNow();
 }
 
 function updateCurrentLine(){
@@ -1056,6 +1063,7 @@ function loadProblem(i){
 
   generateStepsPanel(i);
   generateSupportPanels(i);
+  resetEditorHistory();
 }
 
 async function generateSimilarQuestion(){
@@ -1255,10 +1263,144 @@ function insertAtSelection(text,replaceStart=null,replaceEnd=null){
   el.editor.selectionStart=el.editor.selectionEnd=pos;
 }
 
+function snapshotEditor(){
+  return {v:el.editor.value, ss:el.editor.selectionStart, se:el.editor.selectionEnd};
+}
+
+function restoreEditor(snap){
+  el.editor.value=snap.v;
+  el.editor.selectionStart=snap.ss;
+  el.editor.selectionEnd=snap.se;
+  state.solutions[state.idx]=snap.v;
+  updateGutterIfLineCountChanged(snap.v);
+  renderHighlight();
+  syncGutterToEditorScroll();
+  updateCurrentLine();
+}
+
+function resetEditorHistory(){
+  clearTimeout(state.editHist.timer);
+  state.editHist.timer=null;
+  state.editHist.redos=[];
+  state.editHist.undos=[snapshotEditor()];
+}
+
+function pushEditHistory(){
+  const snap=snapshotEditor();
+  const top=state.editHist.undos[state.editHist.undos.length-1];
+  if(top && top.v===snap.v) return;
+  state.editHist.undos.push(snap);
+  if(state.editHist.undos.length>state.editHist.max) state.editHist.undos.shift();
+  state.editHist.redos=[];
+}
+
+function scheduleEditHistoryPush(){
+  clearTimeout(state.editHist.timer);
+  state.editHist.timer=setTimeout(()=>{
+    state.editHist.timer=null;
+    pushEditHistory();
+  },380);
+}
+
+function commitEditHistoryNow(){
+  clearTimeout(state.editHist.timer);
+  state.editHist.timer=null;
+  pushEditHistory();
+}
+
+function undoEdit(){
+  if(state.editHist.undos.length<2) return;
+  clearTimeout(state.editHist.timer);
+  state.editHist.timer=null;
+  state.editHist.redos.push(snapshotEditor());
+  state.editHist.undos.pop();
+  const prev=state.editHist.undos[state.editHist.undos.length-1];
+  restoreEditor(prev);
+}
+
+function redoEdit(){
+  if(!state.editHist.redos.length) return;
+  clearTimeout(state.editHist.timer);
+  state.editHist.timer=null;
+  const next=state.editHist.redos.pop();
+  state.editHist.undos.push(next);
+  restoreEditor(next);
+}
+
+function selectedLineBlockRange(v,s,ee){
+  const a=Math.min(s,ee), b=Math.max(s,ee);
+  const lineStart=v.lastIndexOf('\n',a-1)+1;
+  const anchor=Math.max(lineStart,b-1);
+  let lineEndExclusive=v.indexOf('\n',anchor);
+  if(lineEndExclusive===-1) lineEndExclusive=v.length;
+  else lineEndExclusive++;
+  return {lineStart,lineEndExclusive};
+}
+
+function mapPosAfterUniformLineIndent(v,lineStart,lineEndExclusive,pos,addLen){
+  const lineCount=(v.slice(lineStart,lineEndExclusive).match(/\n/g)||[]).length+1;
+  const deltaTotal=addLen*lineCount;
+  if(pos<lineStart) return pos;
+  if(pos>=lineEndExclusive) return pos+deltaTotal;
+  const chunk=v.slice(lineStart,pos);
+  const nl=(chunk.match(/\n/g)||[]).length;
+  return pos+addLen*(nl+1);
+}
+
+function dedentLineLeading(line){
+  if(line.startsWith('    ')) return {text:line.slice(4), rm:4};
+  if(line.startsWith('\t')) return {text:line.slice(1), rm:1};
+  const m=/^[ ]{1,4}/.exec(line);
+  if(m) return {text:line.slice(m[0].length), rm:m[0].length};
+  return {text:line, rm:0};
+}
+
+function dedentBlock(block){
+  return block.split('\n').map(l=>dedentLineLeading(l).text).join('\n');
+}
+
+function mapPosAfterDedentBlock(v,lineStart,lineEndExclusive,oldBlock,newBlock,pos){
+  const deltaTotal=newBlock.length-oldBlock.length;
+  if(pos<lineStart) return pos;
+  if(pos>=lineEndExclusive) return pos+deltaTotal;
+  const rel=pos-lineStart;
+  const lines=oldBlock.split('\n');
+  let o=0, nAcc=0;
+  for(let i=0;i<lines.length;i++){
+    const ol=lines[i];
+    const {text:nl, rm}=dedentLineLeading(ol);
+    const term=i<lines.length-1?1:0;
+    const oEnd=o+ol.length;
+    if(rel<=oEnd){
+      const col=rel-o;
+      const nc=col<=rm?0:col-rm;
+      return lineStart+nAcc+nc;
+    }
+    if(term && rel===oEnd+1){
+      return lineStart+nAcc+nl.length;
+    }
+    o=oEnd+term;
+    nAcc+=nl.length+term;
+  }
+  return pos+deltaTotal;
+}
+
 function onEditorKeyDown(e){
   const v=el.editor.value;
   const s=el.editor.selectionStart;
   const ee=el.editor.selectionEnd;
+  const mod=e.metaKey||e.ctrlKey;
+  if(mod && !e.altKey && !e.isComposing && (e.key==='z'||e.key==='Z')){
+    e.preventDefault();
+    if(e.shiftKey) redoEdit();
+    else undoEdit();
+    return;
+  }
+  if(mod && !e.altKey && !e.isComposing && (e.key==='y'||e.key==='Y')){
+    e.preventDefault();
+    redoEdit();
+    return;
+  }
   const isShift3Comment = (e.shiftKey && (e.key==='#' || e.code==='Digit3'));
 
   if(isShift3Comment && s!==ee){
@@ -1273,12 +1415,33 @@ function onEditorKeyDown(e){
     el.editor.selectionStart=lineStart;
     el.editor.selectionEnd=lineStart+commented.length;
     onEditorInput();
+    commitEditHistoryNow();
     return;
   }
 
   if(e.key==='Tab'){
     e.preventDefault();
-    if(e.shiftKey){
+    const indentStr='    ';
+    if(s!==ee){
+      const {lineStart,lineEndExclusive}=selectedLineBlockRange(v,s,ee);
+      const block=v.slice(lineStart,lineEndExclusive);
+      if(e.shiftKey){
+        const newBlock=dedentBlock(block);
+        const newV=v.slice(0,lineStart)+newBlock+v.slice(lineEndExclusive);
+        el.editor.value=newV;
+        const ns=mapPosAfterDedentBlock(v,lineStart,lineEndExclusive,block,newBlock,s);
+        const ne=mapPosAfterDedentBlock(v,lineStart,lineEndExclusive,block,newBlock,ee);
+        el.editor.selectionStart=Math.min(ns,ne);
+        el.editor.selectionEnd=Math.max(ns,ne);
+      }else{
+        const newBlock=block.split('\n').map(l=>indentStr+l).join('\n');
+        el.editor.value=v.slice(0,lineStart)+newBlock+v.slice(lineEndExclusive);
+        const ns=mapPosAfterUniformLineIndent(v,lineStart,lineEndExclusive,s,indentStr.length);
+        const ne=mapPosAfterUniformLineIndent(v,lineStart,lineEndExclusive,ee,indentStr.length);
+        el.editor.selectionStart=Math.min(ns,ne);
+        el.editor.selectionEnd=Math.max(ns,ne);
+      }
+    }else if(e.shiftKey){
       const ls=v.lastIndexOf('\n',s-1)+1;
       if(v.slice(ls,ls+4)==='    '){
         insertAtSelection('',ls,ls+4);
@@ -1289,6 +1452,7 @@ function onEditorKeyDown(e){
       insertAtSelection('    ');
     }
     onEditorInput();
+    commitEditHistoryNow();
     return;
   }
 
@@ -1300,6 +1464,7 @@ function onEditorKeyDown(e){
     const extra=line.trimEnd().endsWith(':')?'    ':'';
     insertAtSelection('\n'+ind+extra);
     onEditorInput();
+    commitEditHistoryNow();
     return;
   }
 
@@ -1310,6 +1475,7 @@ function onEditorKeyDown(e){
       e.preventDefault();
       insertAtSelection('',s-4,s);
       onEditorInput();
+      commitEditHistoryNow();
     }
   }
 }
@@ -1318,6 +1484,7 @@ function onEditorInput(){
   state.solutions[state.idx]=el.editor.value;
   updateGutterIfLineCountChanged(el.editor.value);
   renderHighlight();
+  scheduleEditHistoryPush();
   clearTimeout(state.feedbackTimer);
   state.feedbackTimer=setTimeout(runLiveFeedback,3000);
 }
