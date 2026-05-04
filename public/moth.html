@@ -76,7 +76,7 @@ code,pre{font-family:var(--mono)}
 .similarOpt:hover{background:var(--bg3); color:var(--text)}
 
 .layout{position:relative;display:grid;grid-template-columns:1fr 4px var(--sw,268px);height:calc(100vh - 42px);min-height:0}
-.ecol{min-width:0;min-height:0;display:flex;flex-direction:column}
+.ecol{min-width:0;min-height:0;display:flex;flex-direction:column;position:relative;z-index:1}
 .tabs{height:36px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 10px;gap:14px;overflow:auto}
 .ptab{height:35px;display:flex;align-items:center;padding:0 2px;border-bottom:2px solid transparent;color:var(--text2);font:12px var(--mono);cursor:pointer;white-space:nowrap;background:transparent}
 .ptab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
@@ -84,15 +84,15 @@ code,pre{font-family:var(--mono)}
 .editorwrap{flex:1;display:grid;grid-template-columns:52px 1fr;min-height:0;overflow:visible}
 .gutter{background:var(--bg1);border-right:1px solid var(--border);padding:10px 8px;font:12px/1.75 var(--mono);color:var(--text3);text-align:right;user-select:none;overflow:hidden;white-space:pre;pointer-events:none;min-height:0}
 #gutterInner{margin:0;transform:translateY(0);will-change:transform}
-.editorPane{position:relative;min-height:0;background:var(--bg);overflow:visible;isolation:isolate}
-#currentLine{position:absolute;left:0;right:0;height:21px;background:#2C313C;pointer-events:none;z-index:0}
+.editorPane{position:relative;min-height:0;background:var(--bg);overflow:hidden;isolation:isolate}
+#currentLine{position:absolute;left:0;right:0;top:0;height:21px;background:#2C313C;pointer-events:none;z-index:1;transform:none}
 #editorHl,#editor{position:absolute;inset:0;width:100%;height:100%;padding:10px 12px 24vh 12px;border:none;outline:none;resize:none;overflow:auto;white-space:pre;tab-size:4;font:12px/1.75 var(--mono);font-variant-ligatures:none;-webkit-font-variant-ligatures:none}
-#editorHl{pointer-events:none;user-select:none;-webkit-user-select:none;color:var(--lav);z-index:1}
-#editor{background:transparent;color:transparent !important;-webkit-text-fill-color:transparent !important;caret-color:var(--caret);z-index:2}
+#editorHl{pointer-events:none;user-select:none;-webkit-user-select:none;color:var(--lav);z-index:2}
+#editor{background:transparent;color:transparent !important;-webkit-text-fill-color:transparent !important;caret-color:var(--caret);z-index:3}
 #editor::selection{background:rgba(62,68,81,.45)}
 #fbFloat{
   position:absolute;
-  z-index:3;
+  z-index:12;
   pointer-events:auto;
   max-width:none;
   min-width:220px;
@@ -136,10 +136,10 @@ code,pre{font-family:var(--mono)}
 .t-fn{color:#61afef}
 .t-typ{color:#E5C07B}
 
-.feedback{min-height:56px;border-top:1px solid var(--border);background:var(--bg1);display:flex;align-items:flex-start;gap:10px;padding:10px 14px;font-size:14px;color:var(--text2)}
+.feedback{position:relative;z-index:6;min-height:56px;border-top:1px solid var(--border);background:var(--bg1);display:flex;align-items:flex-start;gap:10px;padding:10px 14px;font-size:14px;color:var(--text2)}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--text3);flex:0 0 auto;margin-top:5px}
 #fbmsg{line-height:1.5;white-space:normal;word-break:break-word;max-width:100%}
-.chips{min-height:38px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:8px 10px;overflow:auto;background:var(--bg)}
+.chips{position:relative;z-index:6;min-height:38px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:8px 10px;overflow:auto;background:var(--bg)}
 .chip{padding:4px 9px;border-radius:999px;border:1px solid var(--border2);font:11px var(--mono);white-space:nowrap;color:var(--text3);background:var(--bg1)}
 .chip.done{color:var(--green);border-color:rgba(52,211,153,.45);background:rgba(52,211,153,.12)}
 .chip.next{color:var(--cyan);border-color:rgba(56,189,248,.45);background:rgba(56,189,248,.12)}
@@ -158,7 +158,7 @@ code,pre{font-family:var(--mono)}
 .handle:hover{background:var(--border3)}
 .cbtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);font:12px var(--mono);cursor:pointer;z-index:5}
 
-.rcol{position:relative;border-left:1px solid var(--border);background:var(--bg1);min-width:0}
+.rcol{position:relative;z-index:2;border-left:1px solid var(--border);background:var(--bg1);min-width:0}
 .rtabs{height:34px;display:flex;align-items:center;gap:8px;padding:0 8px;border-bottom:1px solid var(--border);overflow:auto}
 .rtab{font:10px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text3);cursor:pointer;padding:6px 8px;border-radius:6px;white-space:nowrap;background:transparent}
 .rtab.on{background:rgba(56,189,248,.12);color:var(--cyan)}
@@ -263,6 +263,8 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
 .popWin.show{display:flex}
 .popBody{padding:10px; overflow:auto; flex:1; min-height:0}
 #terminalWin .popBody{display:flex;flex-direction:column;gap:8px;overflow:hidden}
+#doctestWin .popBody{display:flex;flex-direction:column;gap:8px;overflow:hidden;padding:10px}
+#doctestViewBody{margin:0;flex:1;min-height:0;overflow:auto;white-space:pre-wrap;font:12px/1.55 var(--mono);color:var(--text);background:#11151c;border:1px solid var(--border2);border-radius:8px;padding:10px 12px}
 #terminalOutput{background:#11151c;border:1px solid var(--border2);border-radius:8px;padding:10px;white-space:pre-wrap;min-height:0;overflow:auto;color:#ABB2BF;font:12px/1.5 var(--mono);flex:1}
 .termRow{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
 .termBtn{height:28px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);padding:0 10px;border-radius:7px;font-size:12px;cursor:pointer}
@@ -310,7 +312,13 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
       <button class="topbtn" id="helperToggleBtn">helper: on</button>
       <button class="topbtn" id="questionBtn">question</button>
       <button class="topbtn" id="terminalBtn">terminal</button>
-      <button class="topbtn" id="runDoctestsBarBtn" title="Open the terminal and run this problem’s doctests">Run doctests</button>
+      <div class="similarWrap">
+        <button class="topbtn" id="doctestMenuBtn" title="Doctest actions">doctests</button>
+        <div class="similarMenu" id="doctestMenu">
+          <button type="button" class="similarOpt" id="doctestRunOpt">Run doctests</button>
+          <button type="button" class="similarOpt" id="doctestViewOpt">View doctests</button>
+        </div>
+      </div>
       <div class="similarWrap">
         <button class="topbtn" id="similarBtn" title="Generate a new problem like this one">+ similar</button>
         <div class="similarMenu" id="similarMenu">
@@ -372,13 +380,17 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
   <div class="popWin" id="terminalWin" style="left:120px;top:120px;width:520px;height:320px;">
     <div class="popHead" id="terminalWinHead"><span>python terminal</span><button class="closeBtn" id="terminalWinClose">close</button></div>
     <div class="popBody">
-      <div id="terminalOutput">Use Run doctests in the top bar to open this window and test. “Run code + doctests” here runs in the background unless the window is already open.</div>
+      <div id="terminalOutput">Use doctests ▸ Run doctests in the top bar to open this window and test. “Run code + doctests” here runs in the background unless the window is already open.</div>
       <div class="termRow">
         <button class="termBtn" id="runDoctestsTermBtn">Run doctests</button>
         <button class="termBtn" id="runCodeBtn">run code + doctests</button>
         <button class="termBtn" id="clearTermBtn">clear</button>
       </div>
     </div>
+  </div>
+  <div class="popWin" id="doctestWin" style="left:96px;top:88px;width:480px;height:360px;">
+    <div class="popHead" id="doctestWinHead"><span>doctests</span><button class="closeBtn" id="doctestWinClose">close</button></div>
+    <div class="popBody"><pre id="doctestViewBody"></pre></div>
   </div>
   <div class="newOverlay" id="newOverlay">
     <div class="newModal" id="newModal">
@@ -405,7 +417,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
 <script>
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
-const PANEL_CACHE_VER=10;
+const PANEL_CACHE_VER=12;
 
 const state={
   problems:[], idx:0, collapsed:false, sw:268,
@@ -427,12 +439,13 @@ const el={
   newOverlay:document.getElementById('newOverlay'), newModal:document.getElementById('newModal'), newHwInput:document.getElementById('newHwInput'),
   newSimilarMode:document.getElementById('newSimilarMode'), newExamPdf:document.getElementById('newExamPdf'), newPickPdfBtn:document.getElementById('newPickPdfBtn'), newPdfName:document.getElementById('newPdfName'), newAnalyzeBtn:document.getElementById('newAnalyzeBtn'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
-  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), runDoctestsBarBtn:document.getElementById('runDoctestsBarBtn'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
+  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), doctestMenuBtn:document.getElementById('doctestMenuBtn'), doctestMenu:document.getElementById('doctestMenu'), doctestRunOpt:document.getElementById('doctestRunOpt'), doctestViewOpt:document.getElementById('doctestViewOpt'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), gutterInner:document.getElementById('gutterInner'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
   fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
   dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), copyBtn:document.getElementById('copyBtn'),
   questionWin:document.getElementById('questionWin'), questionWinHead:document.getElementById('questionWinHead'), questionWinBody:document.getElementById('questionWinBody'), questionWinClose:document.getElementById('questionWinClose'),
   terminalWin:document.getElementById('terminalWin'), terminalWinHead:document.getElementById('terminalWinHead'), terminalWinClose:document.getElementById('terminalWinClose'), terminalOutput:document.getElementById('terminalOutput'),
+  doctestWin:document.getElementById('doctestWin'), doctestWinHead:document.getElementById('doctestWinHead'), doctestWinClose:document.getElementById('doctestWinClose'), doctestViewBody:document.getElementById('doctestViewBody'),
   runDoctestsTermBtn:document.getElementById('runDoctestsTermBtn'), runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
   fontSlider:document.getElementById('fontSlider'), layout:document.getElementById('layout'), handle:document.getElementById('handle'), collapse:document.getElementById('collapse'),
   rtabs:document.getElementById('rtabs'), stepsPanel:document.getElementById('stepsPanel'), syntaxPanel:document.getElementById('syntaxPanel'),
@@ -492,6 +505,33 @@ function coerceDoctests(raw){
   return '';
 }
 
+function stripEmbeddedDoctestsFromStarter(raw){
+  let s=typeof raw==='string'?raw:'';
+  const extracted=[];
+  function pass(q){
+    const delim=q.repeat(3);
+    let out='';
+    let i=0;
+    while(i<s.length){
+      const j=s.indexOf(delim,i);
+      if(j<0){ out+=s.slice(i); s=out; return; }
+      out+=s.slice(i,j);
+      const k=s.indexOf(delim,j+3);
+      if(k<0){ out+=s.slice(j); s=out; return; }
+      const inner=s.slice(j+3,k);
+      if(inner.includes('>>>')){
+        extracted.push(inner.trim());
+        out+=delim+'Use Question and Doctests ▸ View doctests for >>> examples.'+delim;
+      }else out+=s.slice(j,k+3);
+      i=k+3;
+    }
+    s=out;
+  }
+  pass('"');
+  pass("'");
+  return {starter:s, extracted:extracted.join('\n\n')};
+}
+
 function normalizeProblem(p, idx){
   const ensurePlaceholder = (starterRaw) => {
     let starter = (typeof starterRaw === 'string' ? starterRaw : '').trimEnd();
@@ -507,13 +547,15 @@ function normalizeProblem(p, idx){
     }
     return starter + '\n\n' + quoted + '\n';
   };
+  const stripped=stripEmbeddedDoctestsFromStarter(typeof p.starter==='string'?p.starter:'');
+  const doctests=[coerceDoctests(p.doctests), stripped.extracted].filter(Boolean).join('\n\n');
   return {
     name:p.name||`Q${idx+1}`,
     title:p.title||`Problem ${idx+1}`,
-    starter:ensurePlaceholder(p.starter),
+    starter:ensurePlaceholder(stripped.starter),
     steps:Array.isArray(p.steps)&&p.steps.length?p.steps:['base case','core logic','return value'],
     topic:p.topic||'general',
-    doctests:coerceDoctests(p.doctests)
+    doctests
   };
 }
 
@@ -540,7 +582,7 @@ async function generateQuestionDigest(i){
   const p=state.problems[i];
   if(!p) return;
   if(state.questionDigestCache[i]) return;
-  const fallback=`Goal: Implement ${p.title}.\n\nPlain English:\nWrite the function/class so it behaves like the examples and satisfies each checkpoint.\n\nCheckpoints:\n${(p.steps||[]).map(s=>`- ${s}`).join('\n')}`;
+  const fallback=`Goal: Implement ${p.title}.\n\nPlain English:\nWrite the function/class so it behaves like the examples and satisfies each checkpoint.\n\nCheckpoints:\n${(p.steps||[]).map(s=>`- ${s}`).join('\n')}\n\nDoctests (exact lines for the terminal — copy as shown):\n${(p.doctests||'').trim()||'(none)'}`;
   state.questionDigestCache[i]=fallback;
   if(i===state.idx) renderQuestionPrompt();
   try{
@@ -551,6 +593,7 @@ Output plain text only, with sections:
 - Inputs/outputs
 - Constraints to watch
 - Suggested first 3 steps
+- Doctests (copy the full doctest lines from the input below verbatim, including >>> lines and expected output)
 Keep concise and actionable. Do NOT provide full solution code.`;
     const user=`Title: ${p.title}\nTopic: ${p.topic}\nStarter:\n${p.starter}\nCheckpoints: ${(p.steps||[]).join(', ')}\nDoctests:\n${(p.doctests||'').trim()}`;
     const resp=await callAnthropic([{role:'user',content:user}],sys,400);
@@ -624,7 +667,21 @@ function updateWindowScaledText(win){
     const size=Math.max(12,Math.min(34,Math.min(w*0.032,h*0.055)));
     q.style.fontSize=size+'px';
     q.style.lineHeight=(size*1.5)+'px';
+    return;
   }
+  if(win===el.doctestWin && el.doctestViewBody){
+    const size=Math.max(11,Math.min(20,Math.min(w*0.03,h*0.05)));
+    el.doctestViewBody.style.fontSize=size+'px';
+    el.doctestViewBody.style.lineHeight=(size*1.5)+'px';
+    return;
+  }
+}
+
+function populateDoctestViewer(){
+  const p=state.idx>=0 ? state.problems[state.idx] : null;
+  const t=(p && String(p.doctests||'').trim()) || (state.idx<0 ? 'Load a problem to see doctests.' : 'No doctests for this problem.');
+  el.doctestViewBody.textContent=t;
+  updateWindowScaledText(el.doctestWin);
 }
 
 async function ensurePyodide(){
@@ -908,7 +965,8 @@ function updateCurrentLine(){
   const line=(el.editor.value.slice(0,pos).match(/\n/g)?.length||0)+1;
   const lh=parseFloat(getComputedStyle(el.editor).lineHeight)||24.5;
   const top=10 + (line-1)*lh - el.editor.scrollTop;
-  el.currentLine.style.transform=`translateY(${top}px)`;
+  el.currentLine.style.top=top+'px';
+  el.currentLine.style.transform='none';
   updateFloatingFeedbackPosition();
 }
 
@@ -1097,7 +1155,7 @@ function buildSyntaxFallbackSheet(p){
     ex('Visit children','Often: handle current node, then <strong>for each child</strong> recurse. Mutating helpers sometimes loop until a local invariant holds.',`def walk(node):\n    if not node.children:\n        return\n    while ____:\n        ____\n    for ch in node.children:\n        walk(ch)`) +
     sqlBlock+
     sec('Illustrative doctest (not your homework)')+
-    ex('ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)','Your real checks run from <strong>Run doctests</strong> in the top bar (terminal). This only shows how <code>&gt;&gt;&gt;</code> lines and expected output teach behavior.',`def toy_prune(node, keep):\n    """Toy tree: keep smallest labels (illustration; ____ not filled).\n\n    >>> r = Node(6, [Node(9), Node(2)])\n    >>> toy_prune(r, 1)\n    >>> r.children[0].label\n    2\n    """\n    while ____:\n        ____\n    for c in node.children:\n        toy_prune(c, keep)\n`)+
+    ex('ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)','Your real checks run from <strong>doctests ▸ Run doctests</strong> (opens the terminal). This only shows how <code>&gt;&gt;&gt;</code> lines and expected output teach behavior.',`def toy_prune(node, keep):\n    """Toy tree: keep smallest labels (illustration; ____ not filled).\n\n    >>> r = Node(6, [Node(9), Node(2)])\n    >>> toy_prune(r, 1)\n    >>> r.children[0].label\n    2\n    """\n    while ____:\n        ____\n    for c in node.children:\n        toy_prune(c, keep)\n`)+
   `</div>`;
 }
 
@@ -1166,7 +1224,7 @@ STRUCTURE (required):
 Cover the **topic** (e.g. recursion → base case, trust-the-call, combining results; trees → children loop + base on leaves; SQL → SELECT/WHERE/JOIN/GROUP BY as appropriate). Skip unrelated language trivia.
 
 3) **Required last synItem**: synKw must be exactly <div class="synKw">ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)</div>
-   - synDef: their real tests run from the top bar Run doctests (terminal); this block only teaches **doctest shape** (docstring with >>> and expected lines).
+   - synDef: their real tests run from doctests ▸ Run doctests (terminal); this block only teaches **doctest shape** (docstring with >>> and expected lines).
    - <pre class="synEx">: a short **fake** function with a docstring containing 2–4 >>> examples and a body full of ____ (not a complete runnable solution). May resemble tree/list/mutation *patterns* without copying their types or names.
 
 Allowed tags: div, h3, p, pre, strong, em, code, br. Allowed classes only: refDoc, syntaxRef, synSimple, synSection, synItem, synKw, synDef, synEx, synNote. No markdown fences. No starter identifiers.`;
@@ -1284,12 +1342,13 @@ function loadProblem(i){
   renderChips();
   renderQuestionPrompt();
   generateQuestionDigest(i);
-  setFeedback('info','write under """ YOUR CODE HERE """ — use Run doctests in the top bar to test (opens the terminal only then)');
+  setFeedback('info','write under """ YOUR CODE HERE """ — use doctests ▸ Run doctests to open the terminal and test');
 
   generateStepsPanel(i);
   generateSupportPanels(i);
   renderChatLog();
   resetEditorHistory();
+  if(el.doctestWin.classList.contains('show')) populateDoctestViewer();
 }
 
 async function generateSimilarQuestion(){
@@ -1304,7 +1363,7 @@ async function generateSimilarQuestion(){
 Fields: {name,title,starter,steps,topic,doctests}.
 - name: short tab label
 - title: full problem title
-- starter: Python starter with """ YOUR CODE HERE """ where student types
+- starter: Python starter with """ YOUR CODE HERE """ where student types. Never put >>> lines or doctest examples inside starter or its docstrings — only in doctests.
 - steps: 2-4 word checkpoint labels, 3-6 items
 - topic: CS concept
 - doctests: REQUIRED string in Python doctest format (lines starting with >>> then expected output on following lines, exactly as the REPL would print). Must call the functions/classes from starter (after the student fills YOUR CODE HERE). Include at least 2 examples when the API allows.
@@ -1356,7 +1415,7 @@ Given past exam text, generate new questions that are SIMILAR in concept and dif
 Return ONLY a JSON array of 3-5 items.
 Each item must be: {name,title,starter,steps,topic,doctests}
 Rules:
-- starter must include """ YOUR CODE HERE """
+- starter must include """ YOUR CODE HERE """ — never put >>> or doctest examples inside starter; put all >>> examples only in doctests.
 - steps are 2-4 word checkpoint labels (3-6 steps depending on complexity)
 - doctests: REQUIRED per item — string in Python doctest format (>>> lines then expected output exactly as Python prints). Must exercise the starter's public functions/classes after YOUR CODE HERE is filled. At least 2 examples per item when reasonable.
 - keep the same subject area and style as the source exam
@@ -1369,7 +1428,7 @@ Rules:
 Each item has shape: {name,title,starter,steps,topic,doctests}.
 - For (A): extract real problems from the pasted text.
 - For (B): invent ONE plausible CS homework-style practice problem matching the user's topic — include starter skeleton with """ YOUR CODE HERE """ and 3-6 checkpoint step labels.
-- Preserve """ YOUR CODE HERE """ in starter when you create it.
+- Preserve """ YOUR CODE HERE """ in starter when you create it. Never put >>> or doctest examples inside starter; put all >>> examples only in doctests.
 - Steps: 2-4 word labels, not full instructions. Count: 3 for small, 4-5 medium, 5-6 longer problems.
 - doctests: REQUIRED per item — string in Python doctest format (>>> then expected output lines). Must test the solution implied by the starter; at least 2 examples per item when reasonable. Never omit.`;
       userContent=`Input:\n${raw}`;
@@ -1400,6 +1459,7 @@ Each item has shape: {name,title,starter,steps,topic,doctests}.
   el.app.classList.add('show');
   el.sessionName.textContent=raw.slice(0,58)+(raw.length>58?'...':'');
   toggleWindow(el.terminalWin,false);
+  toggleWindow(el.doctestWin,false);
 
   state.idx=-1;
   loadProblem(0);
@@ -1427,7 +1487,7 @@ Given past exam text, generate new questions that are SIMILAR in concept and dif
 Return ONLY a JSON array of 3-5 items.
 Each item must be: {name,title,starter,steps,topic,doctests}
 Rules:
-- starter must include """ YOUR CODE HERE """
+- starter must include """ YOUR CODE HERE """ — never put >>> or doctest examples inside starter; put all >>> examples only in doctests.
 - steps are 2-4 word checkpoint labels (3-6 steps depending on complexity)
 - doctests: REQUIRED per item — string in Python doctest format (>>> lines then expected output exactly as Python prints). Must exercise the starter's public functions/classes after YOUR CODE HERE is filled. At least 2 examples per item when reasonable.
 - keep the same subject area and style as the source exam
@@ -1440,7 +1500,7 @@ Rules:
 Each item has shape: {name,title,starter,steps,topic,doctests}.
 - For (A): extract real problems from the pasted text.
 - For (B): invent ONE plausible CS homework-style practice problem matching the user's topic — include starter skeleton with """ YOUR CODE HERE """ and 3-6 checkpoint step labels.
-- Preserve """ YOUR CODE HERE """ in starter when you create it.
+- Preserve """ YOUR CODE HERE """ in starter when you create it. Never put >>> or doctest examples inside starter; put all >>> examples only in doctests.
 - Steps: 2-4 word labels, not full instructions. Count: 3 for small, 4-5 medium, 5-6 longer problems.
 - doctests: REQUIRED per item — string in Python doctest format (>>> then expected output lines). Must test the solution implied by the starter; at least 2 examples per item when reasonable. Never omit.`;
       userContent=`Input:\n${raw}`;
@@ -1471,6 +1531,7 @@ Each item has shape: {name,title,starter,steps,topic,doctests}.
   el.app.classList.add('show');
   el.sessionName.textContent=(raw||'new practice').slice(0,58)+((raw||'').length>58?'...':'');
   toggleWindow(el.terminalWin,false);
+  toggleWindow(el.doctestWin,false);
 
   state.idx=-1;
   loadProblem(0);
@@ -1485,6 +1546,7 @@ function toggleNewOverlay(show){
 function goHome(){
   saveCurrentSolution();
   toggleWindow(el.terminalWin,false);
+  toggleWindow(el.doctestWin,false);
   el.app.classList.remove('show');
   el.home.classList.remove('hide');
   el.hwInput.focus();
@@ -1782,6 +1844,21 @@ function bindEvents(){
   el.similarBtn.onclick=(e)=>{
     e.stopPropagation();
     el.similarMenu.classList.toggle('show');
+    el.doctestMenu.classList.remove('show');
+  };
+  el.doctestMenuBtn.onclick=(e)=>{
+    e.stopPropagation();
+    el.doctestMenu.classList.toggle('show');
+    el.similarMenu.classList.remove('show');
+  };
+  el.doctestRunOpt.onclick=()=>{
+    el.doctestMenu.classList.remove('show');
+    runCodeInTerminal({ openTerminal: true });
+  };
+  el.doctestViewOpt.onclick=()=>{
+    el.doctestMenu.classList.remove('show');
+    populateDoctestViewer();
+    toggleWindow(el.doctestWin,true);
   };
   el.similarMenu.querySelectorAll('.similarOpt').forEach(opt=>{
     opt.addEventListener('click',()=>{
@@ -1794,12 +1871,16 @@ function bindEvents(){
     if(!el.similarMenu.contains(e.target) && e.target!==el.similarBtn){
       el.similarMenu.classList.remove('show');
     }
+    if(!el.doctestMenu.contains(e.target) && e.target!==el.doctestMenuBtn){
+      el.doctestMenu.classList.remove('show');
+    }
   });
   el.newBtn.onclick=()=>toggleNewOverlay(true);
   el.questionWinClose.onclick=()=>toggleWindow(el.questionWin,false);
   el.terminalWinClose.onclick=()=>toggleWindow(el.terminalWin,false);
+  el.doctestWinClose.onclick=()=>toggleWindow(el.doctestWin,false);
   toggleWindow(el.terminalWin,false);
-  if(el.runDoctestsBarBtn) el.runDoctestsBarBtn.onclick=()=>runCodeInTerminal({ openTerminal: true });
+  toggleWindow(el.doctestWin,false);
   if(el.runDoctestsTermBtn) el.runDoctestsTermBtn.onclick=()=>runCodeInTerminal({ openTerminal: true });
   el.runCodeBtn.onclick=()=>runCodeInTerminal({ openTerminal: false });
   el.clearTermBtn.onclick=()=>{el.terminalOutput.textContent='(cleared)';};
@@ -1884,8 +1965,10 @@ function bindEvents(){
   renderQuestionPrompt();
   makeWindowMovable(el.questionWin, el.questionWinHead);
   makeWindowMovable(el.terminalWin, el.terminalWinHead);
+  makeWindowMovable(el.doctestWin, el.doctestWinHead);
   updateWindowScaledText(el.questionWin);
   updateWindowScaledText(el.terminalWin);
+  updateWindowScaledText(el.doctestWin);
 
   if(typeof ResizeObserver !== 'undefined'){
     state.helperResizeObserver = new ResizeObserver(()=>{
@@ -1896,9 +1979,11 @@ function bindEvents(){
     const popObserver = new ResizeObserver(()=>{
       updateWindowScaledText(el.questionWin);
       updateWindowScaledText(el.terminalWin);
+      updateWindowScaledText(el.doctestWin);
     });
     popObserver.observe(el.questionWin);
     popObserver.observe(el.terminalWin);
+    popObserver.observe(el.doctestWin);
   }
 }
 
