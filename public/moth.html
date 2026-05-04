@@ -173,7 +173,8 @@ code,pre{font-family:var(--mono)}
 .rpanel ul{margin:0 0 20px;padding-left:22px}
 .rpanel ul li{margin-bottom:10px;line-height:1.75}
 .rpanel strong,.cardx strong{color:var(--text);font-weight:600}
-.refSheet,.refDoc.syntaxRef{font-size:13px;color:var(--text2);line-height:1.75}
+.refSheet,.refDoc.syntaxRef,.refDoc.cpGuide{font-size:13px;color:var(--text2);line-height:1.75}
+.refDoc.cpGuide .refSection h3{text-transform:none;letter-spacing:0;font-size:14px}
 .refSheet h3,.refDoc.syntaxRef h3{font-size:14px;font-weight:600;color:var(--text);margin:28px 0 14px;line-height:1.35}
 .refSheet>h3:first-child,.refDoc.syntaxRef>h3:first-child,.refDoc.syntaxRef .refSection:first-child h3{margin-top:0}
 .refDoc .refSection,.refSheet section{margin:0 0 28px;padding:0 0 24px;border-bottom:1px solid var(--border)}
@@ -345,9 +346,10 @@ code,pre{font-family:var(--mono)}
     <div class="handle" id="handle"><button class="cbtn" id="collapse">›</button></div>
     <div class="rcol" id="rcol">
       <div class="rtabs" id="rtabs"></div>
-      <div class="rpanel" id="hintsPanel"></div>
       <div class="rpanel" id="stepsPanel"></div>
       <div class="rpanel" id="syntaxPanel"></div>
+      <div class="rpanel" id="checkpointsPanel"></div>
+      <div class="rpanel" id="hintsPanel"></div>
       <div class="rpanel" id="gotchasPanel"></div>
       <div class="rpanel" id="refPanel"></div>
       <div class="rpanel chatPanel" id="chatPanel">
@@ -400,7 +402,7 @@ code,pre{font-family:var(--mono)}
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
 const THINKING_MODEL='claude-sonnet-4-6';
-const PANEL_CACHE_VER=5;
+const PANEL_CACHE_VER=6;
 
 const state={
   problems:[], idx:0, collapsed:false, sw:268,
@@ -430,8 +432,8 @@ const el={
   terminalWin:document.getElementById('terminalWin'), terminalWinHead:document.getElementById('terminalWinHead'), terminalWinClose:document.getElementById('terminalWinClose'), terminalOutput:document.getElementById('terminalOutput'),
   runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
   fontSlider:document.getElementById('fontSlider'), layout:document.getElementById('layout'), handle:document.getElementById('handle'), collapse:document.getElementById('collapse'),
-  rtabs:document.getElementById('rtabs'), hintsPanel:document.getElementById('hintsPanel'), stepsPanel:document.getElementById('stepsPanel'),
-  syntaxPanel:document.getElementById('syntaxPanel'), gotchasPanel:document.getElementById('gotchasPanel'), refPanel:document.getElementById('refPanel'),
+  rtabs:document.getElementById('rtabs'), stepsPanel:document.getElementById('stepsPanel'), syntaxPanel:document.getElementById('syntaxPanel'),
+  checkpointsPanel:document.getElementById('checkpointsPanel'), hintsPanel:document.getElementById('hintsPanel'), gotchasPanel:document.getElementById('gotchasPanel'), refPanel:document.getElementById('refPanel'),
   chatPanel:document.getElementById('chatPanel'), chatLog:document.getElementById('chatLog'), chatInput:document.getElementById('chatInput'), chatSend:document.getElementById('chatSend')
 };
 
@@ -1060,15 +1062,18 @@ function buildSyntaxFallbackSheet(){
 function renderSupportFallback(i){
   const p=state.problems[i];
   const steps=(p.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('');
+  const cpFallback=(p.steps||['Implement core logic','Handle edge cases','Return correct result']).map(s=>`<section class="refSection"><h3>${escapeHtml(s)}</h3><p class="refLead">Break this into a <strong>small unit of code</strong> you can test. Describe what “done” looks like before you move to the next checkpoint.</p></section>`).join('');
   const fallback={
     hints:`<div class="cardx"><h4>Focus</h4><p>Work <strong>checkpoint-by-checkpoint</strong> for <code>${escapeHtml(p.name||'Q')}</code>.</p></div><div class="cardx"><h4>Starter first</h4><p>Fill placeholders before refactoring. Keep <strong>function signatures</strong> intact.</p></div><div class="cardx"><h4>Test mentally</h4><p>Walk through a <strong>tiny input</strong> after each edit to confirm state changes.</p></div><div class="cardx"><h4>Edge cases</h4><p>Check <strong>empty</strong> inputs, minimum boundaries, and stop conditions.</p></div>`,
     syntax:buildSyntaxFallbackSheet(),
+    checkpoints:`<div class="refDoc cpGuide">${cpFallback}</div>`,
     gotchas:`<div class="cardx warn"><h4>Off-by-one</h4><p>Compare indices and ranges carefully. Use <strong>&lt;</strong> vs <strong>&lt;=</strong> consistently with how you index.</p></div><div class="cardx warn"><h4>State reset</h4><p>Reset accumulators and iterators in the right place so <strong>each call</strong> starts from a known state.</p></div><div class="cardx warn"><h4>Return timing</h4><p>Save values you still need <strong>before</strong> you mutate variables that held them.</p></div><div class="cardx tip"><h4>Checkpoints</h4><p>Map each chip to one small slice of code so progress stays visible.</p></div><div class="cardx tip"><h4>Small tests</h4><p>After each edit, trace <strong>one tiny example</strong> by hand.</p></div><div class="cardx tip"><h4>Incremental build</h4><p>Get one path working first, then generalize.</p></div>`,
     ref:`<div class="refSheet"><h3>Current problem</h3><p><code>${escapeHtml(p.title||'Problem')}</code></p><h3>Checkpoint plan</h3><ul>${steps || '<li>Implement core logic</li>'}</ul><h3>Mental model</h3><p>Each checkpoint is a <strong>small verifiable unit</strong>. Finish one before leaning on the next.</p></div>`
   };
   state.supportCache[i]={ver:PANEL_CACHE_VER,...fallback};
   el.hintsPanel.innerHTML=fallback.hints;
   el.syntaxPanel.innerHTML=fallback.syntax;
+  el.checkpointsPanel.innerHTML=fallback.checkpoints;
   el.gotchasPanel.innerHTML=fallback.gotchas;
   el.refPanel.innerHTML=fallback.ref;
 }
@@ -1079,6 +1084,7 @@ async function generateSupportPanels(i){
   if(hit && hit.ver===PANEL_CACHE_VER){
     el.hintsPanel.innerHTML=hit.hints;
     el.syntaxPanel.innerHTML=hit.syntax;
+    el.checkpointsPanel.innerHTML=hit.checkpoints;
     el.gotchasPanel.innerHTML=hit.gotchas;
     el.refPanel.innerHTML=hit.ref;
     return;
@@ -1086,6 +1092,7 @@ async function generateSupportPanels(i){
 
   el.hintsPanel.innerHTML='<div class="cardx"><p>Generating hints for this question...</p></div>';
   el.syntaxPanel.innerHTML='<div class="cardx"><p>Generating full syntax reference (with examples)…</p></div>';
+  el.checkpointsPanel.innerHTML='<div class="cardx"><p>Generating checkpoint guide…</p></div>';
   el.gotchasPanel.innerHTML='<div class="cardx"><p>Generating gotchas...</p></div>';
   el.refPanel.innerHTML='<div class="cardx"><p>Generating AI reference...</p></div>';
 
@@ -1118,9 +1125,23 @@ Optional extra line after pre only when helpful:
 <p class="synNote">One short nuance.</p>
 
 Rules: no table/column/function names from their starter. No checkpoint names. Allowed tags: div, p, pre, strong, em, code, br only, plus classes synItem synKw synDef synEx synNote.`;
-    const [hintsRaw, syntaxRaw, gotchasRaw, refRaw] = await Promise.all([
+    const cpGuideSys='You write checkpoint-focused implementation guidance tied to the problem steps: what each checkpoint means in code, how to verify it, and common mistakes. This is not the language cheat-sheet tab—here you may name the checkpoints and reference the starter structure, but do not dump a complete final answer.';
+    const cpGuideUser=`${fullCtx}
+
+Return HTML only inside:
+<div class="refDoc cpGuide"> ... </div>
+
+Create exactly one <section class="refSection"> per checkpoint label listed in the context (same order). For each checkpoint:
+  <h3>Use the checkpoint label as the heading text</h3>
+  <p class="refLead">Several sentences: what this step means in code, where it usually lives in the starter, how to tell it is satisfied, one pitfall. Use <strong> for key ideas.</p>
+  Optional <pre class="refCode">short pattern or skeleton (partial, not the full graded solution)</pre>
+  Optional <ul class="refBullets"><li>quick self-check</li></ul>
+
+Style matches earlier “sectioned” sidebar guides (refSection / refLead / refCode). No markdown. Allowed tags: div, section, h3, p, strong, em, code, pre, ul, li, br.`;
+    const [hintsRaw, syntaxRaw, cpRaw, gotchasRaw, refRaw] = await Promise.all([
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 4 hint cards as HTML only. Each: <div class="cardx"><h4>TITLE</h4><p>BODY</p></div>. Strategy only: use <strong> for critical terms. Use </p><p> between separate ideas for air. Do not paste SQL that references their tables/columns; do not give a full solution.`}], 'You are a CS tutor.', 750),
       callAnthropic([{role:'user',content:syntaxUser}], syntaxSys, 8192, THINKING_MODEL),
+      callAnthropic([{role:'user',content:cpGuideUser}], cpGuideSys, 3200, MODEL),
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 6 gotcha/tip cards as HTML only. Use <div class="cardx warn"> or <div class="cardx tip">, each with <h4> then <p>. Put the main idea in <strong> in the first sentence. Use </p><p> between ideas for vertical space. Avoid pasting their exact SQL or naming their specific tables; speak in general patterns (joins, HAVING vs WHERE, grouping) unless naming is unavoidable.`}], 'You are a CS tutor.', 900),
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate concise reference HTML wrapped in <div class="refSheet">. Sections with <h3>: Core concept, Working plan, Common pitfalls, Mental model. Use <p> with <strong> for key terms; <ul><li> for lists; <code> for identifiers. No markdown markers. Generous vertical spacing: one clear idea per paragraph.`}], 'You are a CS tutor.', 950),
     ]);
@@ -1128,12 +1149,14 @@ Rules: no table/column/function names from their starter. No checkpoint names. A
       ver:PANEL_CACHE_VER,
       hints:sanitizePanelHtml(hintsRaw).trim(),
       syntax:sanitizePanelHtml(syntaxRaw).trim(),
+      checkpoints:sanitizePanelHtml(cpRaw).trim(),
       gotchas:sanitizePanelHtml(gotchasRaw).trim(),
       ref:sanitizePanelHtml(refRaw).trim()
     };
     state.supportCache[i]=cached;
     el.hintsPanel.innerHTML=cached.hints;
     el.syntaxPanel.innerHTML=cached.syntax;
+    el.checkpointsPanel.innerHTML=cached.checkpoints;
     el.gotchasPanel.innerHTML=cached.gotchas;
     el.refPanel.innerHTML=cached.ref;
   }catch(err){
@@ -1650,7 +1673,7 @@ function onEditorInput(){
 }
 
 function initSidebarTabs(){
-  const tabs=[['steps','stepsPanel'],['hints','hintsPanel'],['syntax','syntaxPanel'],['gotchas','gotchasPanel'],['ai ref','refPanel'],['chat','chatPanel']];
+  const tabs=[['steps','stepsPanel'],['syntax','syntaxPanel'],['checkpoints','checkpointsPanel'],['hints','hintsPanel'],['gotchas','gotchasPanel'],['ai ref','refPanel'],['chat','chatPanel']];
   el.rtabs.innerHTML='';
   tabs.forEach(([label,panel],i)=>{
     const t=document.createElement('button');
