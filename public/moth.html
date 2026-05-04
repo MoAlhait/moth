@@ -162,8 +162,6 @@ code,pre{font-family:var(--mono)}
 .doctestTop{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .doctestLab{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text3)}
 .doctestActions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
-.topTermToggle{font-size:11px;color:var(--text2);gap:6px;white-space:nowrap}
-.topTermToggle span{font-size:11px}
 .doctestPre{
   margin:0;
   font:12px/1.45 var(--mono);
@@ -335,7 +333,6 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
       <button class="topbtn" id="helperToggleBtn">helper: on</button>
       <button class="topbtn" id="questionBtn">question</button>
       <button class="topbtn" id="terminalBtn">terminal</button>
-      <label class="modeToggle topTermToggle" title="When on, Run doctests opens the terminal window"><input type="checkbox" id="terminalAutoOpenTop" checked /><span>auto terminal</span></label>
       <div class="similarWrap">
         <button class="topbtn" id="similarBtn" title="Generate a new problem like this one">+ similar</button>
         <div class="similarMenu" id="similarMenu">
@@ -407,7 +404,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
   <div class="popWin" id="terminalWin" style="left:120px;top:120px;width:520px;height:320px;">
     <div class="popHead" id="terminalWinHead"><span>python terminal</span><button class="closeBtn" id="terminalWinClose">close</button></div>
     <div class="popBody">
-      <div id="terminalOutput">Run doctests executes your editor code, then this problem’s doctests in the same namespace.</div>
+      <div id="terminalOutput">Use Run doctests (above the editor) to open this window and test. “Run code + doctests” here runs in the background unless the window is already open.</div>
       <div class="termRow">
         <button class="termBtn" id="runDoctestsTermBtn">Run doctests</button>
         <button class="termBtn" id="runCodeBtn">run code + doctests</button>
@@ -466,7 +463,7 @@ const el={
   newOverlay:document.getElementById('newOverlay'), newModal:document.getElementById('newModal'), newHwInput:document.getElementById('newHwInput'),
   newSimilarMode:document.getElementById('newSimilarMode'), newExamPdf:document.getElementById('newExamPdf'), newPickPdfBtn:document.getElementById('newPickPdfBtn'), newPdfName:document.getElementById('newPdfName'), newAnalyzeBtn:document.getElementById('newAnalyzeBtn'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
-  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), terminalAutoOpenTop:document.getElementById('terminalAutoOpenTop'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
+  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), gutterInner:document.getElementById('gutterInner'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
   fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
   dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), doctestPanel:document.getElementById('doctestPanel'), doctestPre:document.getElementById('doctestPre'), runDoctestsBtn:document.getElementById('runDoctestsBtn'), terminalAutoOpenStrip:document.getElementById('terminalAutoOpenStrip'), copyBtn:document.getElementById('copyBtn'),
@@ -696,13 +693,12 @@ async function ensurePyodide(){
 
 function syncTerminalAutoOpenCheckboxes(v){
   state.autoOpenDoctestTerminal=Boolean(v);
-  if(el.terminalAutoOpenTop) el.terminalAutoOpenTop.checked=state.autoOpenDoctestTerminal;
   if(el.terminalAutoOpenStrip) el.terminalAutoOpenStrip.checked=state.autoOpenDoctestTerminal;
 }
 
 async function runCodeInTerminal(opts){
   opts=opts||{};
-  const openFirst=opts.openTerminal!==false;
+  const openFirst=opts.openTerminal===true;
   if(openFirst) toggleWindow(el.terminalWin,true);
   el.terminalOutput.textContent='Loading Python runtime...';
   try{
@@ -739,8 +735,14 @@ finally:
 RUN_OUTPUT=_buf.getvalue()+_err.getvalue()`);
     const out=py.globals.get('RUN_OUTPUT');
     el.terminalOutput.textContent=(out && String(out).trim()) ? String(out) : '(no output)';
+    if(!openFirst && !el.terminalWin.classList.contains('show')){
+      setFeedback('info','Run finished — open Terminal to view output');
+    }
   }catch(err){
     el.terminalOutput.textContent='Run failed: '+String(err.message||err);
+    if(!openFirst && !el.terminalWin.classList.contains('show')){
+      setFeedback('warn','Run failed — open Terminal to see the error');
+    }
   }
 }
 
@@ -1337,7 +1339,7 @@ function loadProblem(i){
   renderChips();
   renderQuestionPrompt();
   generateQuestionDigest(i);
-  setFeedback('info','write under """ YOUR CODE HERE """ — open terminal and run to verify doctests');
+  setFeedback('info','write under """ YOUR CODE HERE """ — use Run doctests above the editor to test (opens the terminal only then)');
 
   generateStepsPanel(i);
   generateSupportPanels(i);
@@ -1852,15 +1854,14 @@ function bindEvents(){
   el.questionWinClose.onclick=()=>toggleWindow(el.questionWin,false);
   el.terminalWinClose.onclick=()=>toggleWindow(el.terminalWin,false);
   syncTerminalAutoOpenCheckboxes(state.autoOpenDoctestTerminal);
-  if(el.terminalAutoOpenTop){
-    el.terminalAutoOpenTop.addEventListener('change',()=>syncTerminalAutoOpenCheckboxes(el.terminalAutoOpenTop.checked));
-  }
   if(el.terminalAutoOpenStrip){
     el.terminalAutoOpenStrip.addEventListener('change',()=>syncTerminalAutoOpenCheckboxes(el.terminalAutoOpenStrip.checked));
   }
-  if(el.runDoctestsBtn) el.runDoctestsBtn.onclick=()=>runCodeInTerminal({ openTerminal: state.autoOpenDoctestTerminal });
+  if(el.runDoctestsBtn){
+    el.runDoctestsBtn.onclick=()=>runCodeInTerminal({ openTerminal: state.autoOpenDoctestTerminal });
+  }
   if(el.runDoctestsTermBtn) el.runDoctestsTermBtn.onclick=()=>runCodeInTerminal({ openTerminal: true });
-  el.runCodeBtn.onclick=()=>runCodeInTerminal({ openTerminal: true });
+  el.runCodeBtn.onclick=()=>runCodeInTerminal({ openTerminal: false });
   el.clearTermBtn.onclick=()=>{el.terminalOutput.textContent='(cleared)';};
 
   el.fontSlider.oninput=()=>setEditorFont(Number(el.fontSlider.value));
