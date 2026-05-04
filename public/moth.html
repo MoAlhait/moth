@@ -162,25 +162,36 @@ code,pre{font-family:var(--mono)}
 .rtabs{height:34px;display:flex;align-items:center;gap:8px;padding:0 8px;border-bottom:1px solid var(--border);overflow:auto}
 .rtab{font:10px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text3);cursor:pointer;padding:6px 8px;border-radius:6px;white-space:nowrap;background:transparent}
 .rtab.on{background:rgba(56,189,248,.12);color:var(--cyan)}
-.rpanel{position:absolute;inset:34px 0 0 0;padding:12px 14px 16px;overflow:auto;display:none}
+.rpanel{position:absolute;inset:34px 0 0 0;padding:16px 18px 22px;overflow:auto;display:none;line-height:1.65}
 .rpanel.on{display:block}
-.rpanel>h3:first-child{margin-top:0}
-.rpanel h3{font-size:13px;font-weight:600;color:var(--text);margin:18px 0 10px;line-height:1.35}
-.rpanel>h3:first-child{margin-top:4px}
-.rpanel p,.rpanel li{font-size:13px;line-height:1.65;color:var(--text2)}
-.rpanel p{margin:0 0 14px}
+.rpanel>h3:first-child{margin-top:2px}
+.rpanel h3{font-size:14px;font-weight:600;color:var(--text);margin:26px 0 14px;line-height:1.4}
+.rpanel h3:first-child{margin-top:0}
+.rpanel p,.rpanel li{font-size:13px;line-height:1.75;color:var(--text2)}
+.rpanel p{margin:0 0 18px}
 .rpanel p:last-child{margin-bottom:0}
-.rpanel ul{margin:0 0 14px;padding-left:20px}
-.rpanel ul li{margin-bottom:8px}
+.rpanel ul{margin:0 0 20px;padding-left:22px}
+.rpanel ul li{margin-bottom:10px;line-height:1.75}
 .rpanel strong,.cardx strong{color:var(--text);font-weight:600}
-.refSheet,.refDoc{font-size:13px;line-height:1.65;color:var(--text2)}
-.refSheet h3,.refDoc h3{font-size:13px;font-weight:600;color:var(--text);margin:0 0 10px}
-.refDoc .refSection,.refSheet section{margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.refSheet,.refDoc.syntaxRef{font-size:13px;color:var(--text2);line-height:1.75}
+.refSheet h3,.refDoc.syntaxRef h3{font-size:14px;font-weight:600;color:var(--text);margin:28px 0 14px;line-height:1.35}
+.refSheet>h3:first-child,.refDoc.syntaxRef>h3:first-child,.refDoc.syntaxRef .refSection:first-child h3{margin-top:0}
+.refDoc .refSection,.refSheet section{margin:0 0 28px;padding:0 0 24px;border-bottom:1px solid var(--border)}
 .refDoc .refSection:last-child,.refSheet section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
-.refLead{margin:0 0 12px;color:var(--text2);line-height:1.65}
-.refCode{display:block;margin:10px 0 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;overflow:auto;font:12px/1.55 var(--mono);color:var(--text)}
-.refBullets{margin:0 0 10px;padding-left:18px;color:var(--text2)}
-.refBullets li{margin-bottom:10px;line-height:1.6}
+.refDoc .refSection h3{margin:0 0 14px}
+.refLead{margin:0 0 16px;color:var(--text2);line-height:1.75}
+.syntaxRef>h3{margin:26px 0 14px;font-size:14px;font-weight:600;color:var(--text);line-height:1.35}
+.syntaxRef>h3:first-child{margin-top:0}
+.syntaxRef>p:not([class]){margin:0 0 18px;line-height:1.75}
+.syntaxRef>p + h3{margin-top:10px}
+.refCode{display:block;margin:12px 0 18px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;overflow:auto;font:12px/1.65 var(--mono);color:var(--text);line-height:1.65}
+.refBullets{margin:4px 0 16px;padding-left:22px;color:var(--text2)}
+.refBullets li{margin-bottom:12px;line-height:1.75}
+.refDoc .refSection > *{margin-top:0}
+.refDoc .refSection > * + *{margin-top:14px}
+.refDoc .refSection > h3 + *{margin-top:0}
+.refSheet>p,.refSheet>ul{margin-bottom:18px}
+.refSheet>ul>li{margin-bottom:10px}
 #chatPanel.rpanel.on{display:flex!important;flex-direction:column;overflow:hidden;padding-bottom:10px}
 .chatIntro{margin:0 0 12px;font-size:12px;line-height:1.6;color:var(--text2);flex-shrink:0}
 #chatLog{flex:1;min-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:6px 2px 14px;margin:0 -2px}
@@ -190,14 +201,14 @@ code,pre{font-family:var(--mono)}
 .chatComposer{display:flex;flex-direction:column;gap:8px;flex-shrink:0;border-top:1px solid var(--border);padding-top:12px;margin-top:4px}
 #chatInput{width:100%;min-height:56px;max-height:160px;resize:vertical;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;line-height:1.5;font-family:var(--sans)}
 #chatSend{align-self:flex-end}
-.cardx{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 14px 16px;margin-bottom:14px}
-.cardx h4{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:0 0 10px}
-.cardx p,.cardx li{font-size:13px;color:var(--text2);line-height:1.65}
-.cardx p{margin:0 0 12px}
+.cardx{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px 16px 18px;margin-bottom:18px}
+.cardx h4{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:0 0 12px}
+.cardx p,.cardx li{font-size:13px;color:var(--text2);line-height:1.75}
+.cardx p{margin:0 0 14px}
 .cardx p:last-child{margin-bottom:0}
-.cardx p + p{margin-top:4px}
-.cardx ul{margin:8px 0 0;padding-left:18px}
-.cardx ul li{margin-bottom:8px}
+.cardx p + p{margin-top:6px}
+.cardx ul{margin:10px 0 0;padding-left:20px}
+.cardx ul li{margin-bottom:10px;line-height:1.75}
 .cardx code{font-family:var(--mono);color:var(--cyan);font-size:12px}
 .warn{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.35)}
 .tip{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.35)}
@@ -382,6 +393,7 @@ code,pre{font-family:var(--mono)}
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
 const THINKING_MODEL='claude-sonnet-4-6';
+const PANEL_CACHE_VER=3;
 
 const state={
   problems:[], idx:0, collapsed:false, sw:268,
@@ -1031,7 +1043,7 @@ function renderSupportFallback(i){
     gotchas:`<div class="cardx warn"><h4>Off-by-one</h4><p>Compare indices and ranges carefully. Use <strong>&lt;</strong> vs <strong>&lt;=</strong> consistently with how you index.</p></div><div class="cardx warn"><h4>State reset</h4><p>Reset accumulators and iterators in the right place so <strong>each call</strong> starts from a known state.</p></div><div class="cardx warn"><h4>Return timing</h4><p>Save values you still need <strong>before</strong> you mutate variables that held them.</p></div><div class="cardx tip"><h4>Checkpoints</h4><p>Map each chip to one small slice of code so progress stays visible.</p></div><div class="cardx tip"><h4>Small tests</h4><p>After each edit, trace <strong>one tiny example</strong> by hand.</p></div><div class="cardx tip"><h4>Incremental build</h4><p>Get one path working first, then generalize.</p></div>`,
     ref:`<div class="refSheet"><h3>Current problem</h3><p><code>${escapeHtml(p.title||'Problem')}</code></p><h3>Checkpoint plan</h3><ul>${steps || '<li>Implement core logic</li>'}</ul><h3>Mental model</h3><p>Each checkpoint is a <strong>small verifiable unit</strong>. Finish one before leaning on the next.</p></div>`
   };
-  state.supportCache[i]=fallback;
+  state.supportCache[i]={ver:PANEL_CACHE_VER,...fallback};
   el.hintsPanel.innerHTML=fallback.hints;
   el.syntaxPanel.innerHTML=fallback.syntax;
   el.gotchasPanel.innerHTML=fallback.gotchas;
@@ -1040,12 +1052,12 @@ function renderSupportFallback(i){
 
 async function generateSupportPanels(i){
   const p=state.problems[i];
-  if(state.supportCache[i]){
-    const c=state.supportCache[i];
-    el.hintsPanel.innerHTML=c.hints;
-    el.syntaxPanel.innerHTML=c.syntax;
-    el.gotchasPanel.innerHTML=c.gotchas;
-    el.refPanel.innerHTML=c.ref;
+  const hit=state.supportCache[i];
+  if(hit && hit.ver===PANEL_CACHE_VER){
+    el.hintsPanel.innerHTML=hit.hints;
+    el.syntaxPanel.innerHTML=hit.syntax;
+    el.gotchasPanel.innerHTML=hit.gotchas;
+    el.refPanel.innerHTML=hit.ref;
     return;
   }
 
@@ -1057,33 +1069,36 @@ async function generateSupportPanels(i){
   try{
     const baseCtx=`Title: ${p.title}\nTopic: ${p.topic}\nStarter (context only — do not quote verbatim as a solution):\n${p.starter}`;
     const fullCtx=`${baseCtx}\nCheckpoints: ${(p.steps||[]).join(', ')}`;
-    const syntaxSys='You author Python language reference sheets (W3Schools / open-book exam style): builtins, statements, and stdlib patterns. Never give homework-specific answers, checkpoint walkthroughs, or full solutions to the starter task.';
+    const syntaxSys='You author Python-only language reference sheets (W3Schools / exam cheat-sheet style): builtins, statements, stdlib, and string/SQL embedding patterns in Python. Never teach the homework SQL logic, never name tables/columns/functions copied from the student starter, never walk checkpoints. If the assignment embeds SQL in Python, teach Python side only (strings, triple quotes, f-strings, .format, parameters, cursor.execute patterns with placeholders) using toy names like books, orders, customers — not their schema.';
     const syntaxUser=`${baseCtx}
 
 Return HTML only inside ONE wrapper:
 <div class="refDoc syntaxRef"> ... </div>
 
-This must be a Python language and library reference for concepts relevant to the TOPIC above (infer from title/topic/starter: e.g. SQL-related homework → strings, f-strings, formatting; classes → methods, self, super; iterators → yield, StopIteration).
+This must be a Python language and library reference for concepts relevant to the TOPIC (infer from title/topic: e.g. embedded SQL exercises → Python strings, multiline strings, f-strings, .strip, .split, formatting; OOP homework → class, self, super, properties; iterators → yield, iter, next).
 
-Include 6–10 sections, each:
+Include 6–10 sections, each exactly:
 <section class="refSection">
   <h3>Short feature name</h3>
-  <p class="refLead">1–2 sentences: what it does and when to use it. Wrap key terms in strong tags (open and close).</p>
+  <p class="refLead">1–2 sentences. Use strong tags around important terms (open and close).</p>
   <pre class="refCode">minimal correct Python example</pre>
-  <ul class="refBullets"><li>optional bullet</li></ul>  (omit the list if not needed)
+  <ul class="refBullets"><li>optional</li></ul>
 </section>
+Omit the ul block entirely when bullets are not needed.
 
 Hard rules:
-- Do not name checkpoint labels, do not solve this assignment, do not paste required query or logic from the homework.
-- No markdown (no asterisk emphasis or hash headings in output). HTML tags only: div, section, h3, p, strong, em, code, pre, ul, li, br.
-- Examples must be generic/teaching snippets, not their exact task.`;
+- Do not name checkpoint labels. Do not reference identifiers from the starter (table names, column names, function names, string literals from their template). Use neutral toy data in examples.
+- Do not write SQL that solves their assignment. If you show SQL inside Python strings, it must be generic (SELECT * FROM books) not their schema.
+- No markdown. HTML only: div, section, h3, p, strong, em, code, pre, ul, li, br.
+- Every section must use the refSection wrapper so spacing stays consistent.`;
     const [hintsRaw, syntaxRaw, gotchasRaw, refRaw] = await Promise.all([
-      callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 4 hint cards as HTML only. Each: <div class="cardx"><h4>TITLE</h4><p>BODY</p></div>. In BODY use <strong> for critical terms. One or two short paragraphs per card (use </p><p> if two). No final solution code.`}], 'You are a CS tutor.', 750),
+      callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 4 hint cards as HTML only. Each: <div class="cardx"><h4>TITLE</h4><p>BODY</p></div>. Strategy only: use <strong> for critical terms. Use </p><p> between separate ideas for air. Do not paste SQL that references their tables/columns; do not give a full solution.`}], 'You are a CS tutor.', 750),
       callAnthropic([{role:'user',content:syntaxUser}], syntaxSys, 1600),
-      callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 6 gotcha/tip cards as HTML only. Alternate problem-relevant mistakes: use <div class="cardx warn"> or <div class="cardx tip">, each with <h4> then <p>. Put the main idea in <strong> inside the first sentence. Add whitespace: one idea per paragraph; use </p><p> when two ideas.`}], 'You are a CS tutor.', 900),
+      callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 6 gotcha/tip cards as HTML only. Use <div class="cardx warn"> or <div class="cardx tip">, each with <h4> then <p>. Put the main idea in <strong> in the first sentence. Use </p><p> between ideas for vertical space. Avoid pasting their exact SQL or naming their specific tables; speak in general patterns (joins, HAVING vs WHERE, grouping) unless naming is unavoidable.`}], 'You are a CS tutor.', 900),
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate concise reference HTML wrapped in <div class="refSheet">. Sections with <h3>: Core concept, Working plan, Common pitfalls, Mental model. Use <p> with <strong> for key terms; <ul><li> for lists; <code> for identifiers. No markdown markers. Generous vertical spacing: one clear idea per paragraph.`}], 'You are a CS tutor.', 950),
     ]);
     const cached={
+      ver:PANEL_CACHE_VER,
       hints:sanitizePanelHtml(hintsRaw).trim(),
       syntax:sanitizePanelHtml(syntaxRaw).trim(),
       gotchas:sanitizePanelHtml(gotchasRaw).trim(),
