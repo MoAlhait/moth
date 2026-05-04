@@ -154,29 +154,6 @@ code,pre{font-family:var(--mono)}
   padding:8px 12px;
   white-space:normal;
 }
-.doctestPanel{
-  border-bottom:1px solid var(--border);
-  background:rgba(24,28,34,.95);
-  padding:8px 12px 10px;
-}
-.doctestTop{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-.doctestLab{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text3)}
-.doctestActions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
-.doctestPre{
-  margin:0;
-  font:12px/1.45 var(--mono);
-  color:var(--text);
-  white-space:pre-wrap;
-  word-break:break-word;
-  max-height:140px;
-  overflow:auto;
-  background:#11151c;
-  border:1px solid var(--border2);
-  border-radius:8px;
-  padding:8px 10px;
-}
-.doctestPanel.empty .doctestPre{color:var(--text3);font-style:italic;background:transparent;border-style:dashed}
-
 .handle{position:relative;background:var(--border);cursor:col-resize}
 .handle:hover{background:var(--border3)}
 .cbtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);font:12px var(--mono);cursor:pointer;z-index:5}
@@ -333,6 +310,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
       <button class="topbtn" id="helperToggleBtn">helper: on</button>
       <button class="topbtn" id="questionBtn">question</button>
       <button class="topbtn" id="terminalBtn">terminal</button>
+      <button class="topbtn" id="runDoctestsBarBtn" title="Open the terminal and run this problem’s doctests">Run doctests</button>
       <div class="similarWrap">
         <button class="topbtn" id="similarBtn" title="Generate a new problem like this one">+ similar</button>
         <div class="similarMenu" id="similarMenu">
@@ -350,15 +328,6 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
     <div class="ecol">
       <div class="tabs" id="ptabs"></div>
       <div class="questionInline" id="questionInline">Open a problem to see what to build.</div>
-      <div class="doctestPanel empty" id="doctestPanel">
-        <div class="doctestTop">
-          <div class="doctestLab">doctests</div>
-          <div class="doctestActions">
-            <button type="button" class="termBtn" id="runDoctestsBtn">Run doctests</button>
-          </div>
-        </div>
-        <pre class="doctestPre" id="doctestPre">No doctests yet for this problem.</pre>
-      </div>
       <div class="editorwrap">
         <div class="gutter" id="gutter"><pre id="gutterInner">1</pre></div>
         <div class="editorPane" id="editorPane">
@@ -403,7 +372,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
   <div class="popWin" id="terminalWin" style="left:120px;top:120px;width:520px;height:320px;">
     <div class="popHead" id="terminalWinHead"><span>python terminal</span><button class="closeBtn" id="terminalWinClose">close</button></div>
     <div class="popBody">
-      <div id="terminalOutput">Use Run doctests (above the editor) to open this window and test. “Run code + doctests” here runs in the background unless the window is already open.</div>
+      <div id="terminalOutput">Use Run doctests in the top bar to open this window and test. “Run code + doctests” here runs in the background unless the window is already open.</div>
       <div class="termRow">
         <button class="termBtn" id="runDoctestsTermBtn">Run doctests</button>
         <button class="termBtn" id="runCodeBtn">run code + doctests</button>
@@ -436,7 +405,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
 <script>
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
-const PANEL_CACHE_VER=9;
+const PANEL_CACHE_VER=10;
 
 const state={
   problems:[], idx:0, collapsed:false, sw:268,
@@ -458,10 +427,10 @@ const el={
   newOverlay:document.getElementById('newOverlay'), newModal:document.getElementById('newModal'), newHwInput:document.getElementById('newHwInput'),
   newSimilarMode:document.getElementById('newSimilarMode'), newExamPdf:document.getElementById('newExamPdf'), newPickPdfBtn:document.getElementById('newPickPdfBtn'), newPdfName:document.getElementById('newPdfName'), newAnalyzeBtn:document.getElementById('newAnalyzeBtn'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
-  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
+  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), runDoctestsBarBtn:document.getElementById('runDoctestsBarBtn'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), gutterInner:document.getElementById('gutterInner'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
   fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
-  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), doctestPanel:document.getElementById('doctestPanel'), doctestPre:document.getElementById('doctestPre'), runDoctestsBtn:document.getElementById('runDoctestsBtn'), copyBtn:document.getElementById('copyBtn'),
+  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), copyBtn:document.getElementById('copyBtn'),
   questionWin:document.getElementById('questionWin'), questionWinHead:document.getElementById('questionWinHead'), questionWinBody:document.getElementById('questionWinBody'), questionWinClose:document.getElementById('questionWinClose'),
   terminalWin:document.getElementById('terminalWin'), terminalWinHead:document.getElementById('terminalWinHead'), terminalWinClose:document.getElementById('terminalWinClose'), terminalOutput:document.getElementById('terminalOutput'),
   runDoctestsTermBtn:document.getElementById('runDoctestsTermBtn'), runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
@@ -591,25 +560,11 @@ Keep concise and actionable. Do NOT provide full solution code.`;
   }catch{}
 }
 
-function renderDoctestStrip(){
-  const p=state.problems[state.idx];
-  const dt=(p && p.doctests && String(p.doctests).trim()) || '';
-  if(!el.doctestPre||!el.doctestPanel) return;
-  if(dt){
-    el.doctestPanel.classList.remove('empty');
-    el.doctestPre.textContent=dt;
-  }else{
-    el.doctestPanel.classList.add('empty');
-    el.doctestPre.textContent='No doctests on this problem — re-analyze with the latest moth so the model can supply them.';
-  }
-}
-
 function renderQuestionPrompt(){
   const p=state.problems[state.idx];
   const prompt=state.questionDigestCache[state.idx] || getQuestionPromptText(p);
   const short=prompt.split('\n').slice(0,2).join(' ').slice(0,240);
   el.questionInline.textContent=short + (short.length>=220?'…':'');
-  renderDoctestStrip();
   if(typeof marked!=='undefined'){
     const html = marked.parse(String(prompt||''), { breaks: true });
     // basic sanitize guard for generated content
@@ -1142,7 +1097,7 @@ function buildSyntaxFallbackSheet(p){
     ex('Visit children','Often: handle current node, then <strong>for each child</strong> recurse. Mutating helpers sometimes loop until a local invariant holds.',`def walk(node):\n    if not node.children:\n        return\n    while ____:\n        ____\n    for ch in node.children:\n        walk(ch)`) +
     sqlBlock+
     sec('Illustrative doctest (not your homework)')+
-    ex('ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)','Your real checks are in the app’s <strong>doctests</strong> strip and terminal. This only shows how <code>&gt;&gt;&gt;</code> lines and expected output teach behavior.',`def toy_prune(node, keep):\n    """Toy tree: keep smallest labels (illustration; ____ not filled).\n\n    >>> r = Node(6, [Node(9), Node(2)])\n    >>> toy_prune(r, 1)\n    >>> r.children[0].label\n    2\n    """\n    while ____:\n        ____\n    for c in node.children:\n        toy_prune(c, keep)\n`)+
+    ex('ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)','Your real checks run from <strong>Run doctests</strong> in the top bar (terminal). This only shows how <code>&gt;&gt;&gt;</code> lines and expected output teach behavior.',`def toy_prune(node, keep):\n    """Toy tree: keep smallest labels (illustration; ____ not filled).\n\n    >>> r = Node(6, [Node(9), Node(2)])\n    >>> toy_prune(r, 1)\n    >>> r.children[0].label\n    2\n    """\n    while ____:\n        ____\n    for c in node.children:\n        toy_prune(c, keep)\n`)+
   `</div>`;
 }
 
@@ -1211,7 +1166,7 @@ STRUCTURE (required):
 Cover the **topic** (e.g. recursion → base case, trust-the-call, combining results; trees → children loop + base on leaves; SQL → SELECT/WHERE/JOIN/GROUP BY as appropriate). Skip unrelated language trivia.
 
 3) **Required last synItem**: synKw must be exactly <div class="synKw">ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)</div>
-   - synDef: their real tests are in the app; this block only teaches **doctest shape** (docstring with >>> and expected lines).
+   - synDef: their real tests run from the top bar Run doctests (terminal); this block only teaches **doctest shape** (docstring with >>> and expected lines).
    - <pre class="synEx">: a short **fake** function with a docstring containing 2–4 >>> examples and a body full of ____ (not a complete runnable solution). May resemble tree/list/mutation *patterns* without copying their types or names.
 
 Allowed tags: div, h3, p, pre, strong, em, code, br. Allowed classes only: refDoc, syntaxRef, synSimple, synSection, synItem, synKw, synDef, synEx, synNote. No markdown fences. No starter identifiers.`;
@@ -1329,7 +1284,7 @@ function loadProblem(i){
   renderChips();
   renderQuestionPrompt();
   generateQuestionDigest(i);
-  setFeedback('info','write under """ YOUR CODE HERE """ — use Run doctests above the editor to test (opens the terminal only then)');
+  setFeedback('info','write under """ YOUR CODE HERE """ — use Run doctests in the top bar to test (opens the terminal only then)');
 
   generateStepsPanel(i);
   generateSupportPanels(i);
@@ -1844,7 +1799,7 @@ function bindEvents(){
   el.questionWinClose.onclick=()=>toggleWindow(el.questionWin,false);
   el.terminalWinClose.onclick=()=>toggleWindow(el.terminalWin,false);
   toggleWindow(el.terminalWin,false);
-  if(el.runDoctestsBtn) el.runDoctestsBtn.onclick=()=>runCodeInTerminal({ openTerminal: true });
+  if(el.runDoctestsBarBtn) el.runDoctestsBarBtn.onclick=()=>runCodeInTerminal({ openTerminal: true });
   if(el.runDoctestsTermBtn) el.runDoctestsTermBtn.onclick=()=>runCodeInTerminal({ openTerminal: true });
   el.runCodeBtn.onclick=()=>runCodeInTerminal({ openTerminal: false });
   el.clearTermBtn.onclick=()=>{el.terminalOutput.textContent='(cleared)';};
