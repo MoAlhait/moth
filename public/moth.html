@@ -92,7 +92,7 @@ code,pre{font-family:var(--mono)}
 #editor::selection{background:rgba(62,68,81,.45)}
 #fbFloat{
   position:absolute;
-  z-index:4;
+  z-index:3;
   pointer-events:auto;
   max-width:none;
   min-width:220px;
@@ -123,8 +123,9 @@ code,pre{font-family:var(--mono)}
   display:flex;align-items:center;justify-content:space-between;
   padding:6px 10px;border-bottom:1px solid var(--border);
   background:rgba(44,49,60,.92);font:11px var(--mono);color:var(--text2);cursor:move;
+  pointer-events:auto;
 }
-#fbFloatBody{padding:10px 12px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow:visible;max-height:none}
+#fbFloatBody{padding:10px 12px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow:visible;max-height:none;pointer-events:none}
 
 /* Pastel syntax colors */
 .t-com{color:#5c6370}
@@ -158,7 +159,11 @@ code,pre{font-family:var(--mono)}
   background:rgba(24,28,34,.95);
   padding:8px 12px 10px;
 }
-.doctestLab{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px}
+.doctestTop{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.doctestLab{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text3)}
+.doctestActions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.topTermToggle{font-size:11px;color:var(--text2);gap:6px;white-space:nowrap}
+.topTermToggle span{font-size:11px}
 .doctestPre{
   margin:0;
   font:12px/1.45 var(--mono);
@@ -284,7 +289,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
 .popBody{padding:10px; overflow:auto; flex:1; min-height:0}
 #terminalWin .popBody{display:flex;flex-direction:column;gap:8px;overflow:hidden}
 #terminalOutput{background:#11151c;border:1px solid var(--border2);border-radius:8px;padding:10px;white-space:pre-wrap;min-height:0;overflow:auto;color:#ABB2BF;font:12px/1.5 var(--mono);flex:1}
-.termRow{display:flex;gap:8px;margin-top:8px}
+.termRow{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
 .termBtn{height:28px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);padding:0 10px;border-radius:7px;font-size:12px;cursor:pointer}
 .questionText{white-space:pre-wrap;font:13px/1.6 var(--sans);color:var(--text);margin:0}
 .questionMd{font:13px/1.6 var(--sans);color:var(--text)}
@@ -330,6 +335,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
       <button class="topbtn" id="helperToggleBtn">helper: on</button>
       <button class="topbtn" id="questionBtn">question</button>
       <button class="topbtn" id="terminalBtn">terminal</button>
+      <label class="modeToggle topTermToggle" title="When on, Run doctests opens the terminal window"><input type="checkbox" id="terminalAutoOpenTop" checked /><span>auto terminal</span></label>
       <div class="similarWrap">
         <button class="topbtn" id="similarBtn" title="Generate a new problem like this one">+ similar</button>
         <div class="similarMenu" id="similarMenu">
@@ -348,7 +354,13 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
       <div class="tabs" id="ptabs"></div>
       <div class="questionInline" id="questionInline">Open a problem to see what to build.</div>
       <div class="doctestPanel empty" id="doctestPanel">
-        <div class="doctestLab">doctests (terminal run)</div>
+        <div class="doctestTop">
+          <div class="doctestLab">doctests</div>
+          <div class="doctestActions">
+            <button type="button" class="termBtn" id="runDoctestsBtn">Run doctests</button>
+            <label class="modeToggle" title="Open the terminal when running doctests"><input type="checkbox" id="terminalAutoOpenStrip" checked /><span style="font-size:11px;color:var(--text2)">open terminal</span></label>
+          </div>
+        </div>
         <pre class="doctestPre" id="doctestPre">No doctests yet for this problem.</pre>
       </div>
       <div class="editorwrap">
@@ -395,9 +407,10 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
   <div class="popWin" id="terminalWin" style="left:120px;top:120px;width:520px;height:320px;">
     <div class="popHead" id="terminalWinHead"><span>python terminal</span><button class="closeBtn" id="terminalWinClose">close</button></div>
     <div class="popBody">
-      <div id="terminalOutput">Run executes your editor, then runs this problem’s doctests in the same namespace.</div>
+      <div id="terminalOutput">Run doctests executes your editor code, then this problem’s doctests in the same namespace.</div>
       <div class="termRow">
-        <button class="termBtn" id="runCodeBtn">run current tab</button>
+        <button class="termBtn" id="runDoctestsTermBtn">Run doctests</button>
+        <button class="termBtn" id="runCodeBtn">run code + doctests</button>
         <button class="termBtn" id="clearTermBtn">clear</button>
       </div>
     </div>
@@ -443,7 +456,8 @@ const state={
   helperFollow:true,
   helperResizeObserver:null,
   pyodide:null,
-  editHist:{undos:[], redos:[], timer:null, max:200}
+  editHist:{undos:[], redos:[], timer:null, max:200},
+  autoOpenDoctestTerminal:true
 };
 
 const el={
@@ -452,13 +466,13 @@ const el={
   newOverlay:document.getElementById('newOverlay'), newModal:document.getElementById('newModal'), newHwInput:document.getElementById('newHwInput'),
   newSimilarMode:document.getElementById('newSimilarMode'), newExamPdf:document.getElementById('newExamPdf'), newPickPdfBtn:document.getElementById('newPickPdfBtn'), newPdfName:document.getElementById('newPdfName'), newAnalyzeBtn:document.getElementById('newAnalyzeBtn'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
-  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
+  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), terminalAutoOpenTop:document.getElementById('terminalAutoOpenTop'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), gutterInner:document.getElementById('gutterInner'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
   fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
-  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), doctestPanel:document.getElementById('doctestPanel'), doctestPre:document.getElementById('doctestPre'), copyBtn:document.getElementById('copyBtn'),
+  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), doctestPanel:document.getElementById('doctestPanel'), doctestPre:document.getElementById('doctestPre'), runDoctestsBtn:document.getElementById('runDoctestsBtn'), terminalAutoOpenStrip:document.getElementById('terminalAutoOpenStrip'), copyBtn:document.getElementById('copyBtn'),
   questionWin:document.getElementById('questionWin'), questionWinHead:document.getElementById('questionWinHead'), questionWinBody:document.getElementById('questionWinBody'), questionWinClose:document.getElementById('questionWinClose'),
   terminalWin:document.getElementById('terminalWin'), terminalWinHead:document.getElementById('terminalWinHead'), terminalWinClose:document.getElementById('terminalWinClose'), terminalOutput:document.getElementById('terminalOutput'),
-  runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
+  runDoctestsTermBtn:document.getElementById('runDoctestsTermBtn'), runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
   fontSlider:document.getElementById('fontSlider'), layout:document.getElementById('layout'), handle:document.getElementById('handle'), collapse:document.getElementById('collapse'),
   rtabs:document.getElementById('rtabs'), stepsPanel:document.getElementById('stepsPanel'), syntaxPanel:document.getElementById('syntaxPanel'),
   checkpointsPanel:document.getElementById('checkpointsPanel'), hintsPanel:document.getElementById('hintsPanel'), gotchasPanel:document.getElementById('gotchasPanel'), refPanel:document.getElementById('refPanel'),
@@ -680,8 +694,16 @@ async function ensurePyodide(){
   return state.pyodide;
 }
 
-async function runCodeInTerminal(){
-  toggleWindow(el.terminalWin,true);
+function syncTerminalAutoOpenCheckboxes(v){
+  state.autoOpenDoctestTerminal=Boolean(v);
+  if(el.terminalAutoOpenTop) el.terminalAutoOpenTop.checked=state.autoOpenDoctestTerminal;
+  if(el.terminalAutoOpenStrip) el.terminalAutoOpenStrip.checked=state.autoOpenDoctestTerminal;
+}
+
+async function runCodeInTerminal(opts){
+  opts=opts||{};
+  const openFirst=opts.openTerminal!==false;
+  if(openFirst) toggleWindow(el.terminalWin,true);
   el.terminalOutput.textContent='Loading Python runtime...';
   try{
     const py=await ensurePyodide();
@@ -964,20 +986,20 @@ function updateFloatingFeedbackPosition(){
   }
   const paneW=el.editorPane.clientWidth;
   const paneH=el.editorPane.clientHeight;
-  const {x:caretX,y:caretY,lh}=getCaretXY();
-  const width=el.fbFloat.offsetWidth || Math.max(260,Math.floor(paneW*0.38));
+  const {y:caretY,lh}=getCaretXY();
+  const width=Math.min(Math.max(260,Math.floor(paneW*0.44)),paneW-20);
   el.fbFloat.style.width=width+'px';
 
-  // Prefer to the right of caret; flip left if needed.
-  let x=caretX+24;
-  if(x+width>paneW-10) x=Math.max(10,caretX-width-24);
-  // Keep away from the left text-start band when possible.
-  if(x<Math.floor(paneW*0.52) && paneW>520) x=Math.min(paneW-width-10,Math.floor(paneW*0.58));
-
-  const boxH=el.fbFloat.offsetHeight || Math.max(90,el.fbFloat.scrollHeight+4);
+  const boxH=el.fbFloat.offsetHeight||Math.max(90,el.fbFloat.scrollHeight+4);
   const minY=8;
   const maxY=Math.max(minY,paneH-boxH-8);
-  const y=Math.max(minY,Math.min(maxY,caretY-lh*0.25));
+
+  const x=Math.max(10,paneW-width-10);
+
+  let y=caretY+lh*1.12;
+  if(y+boxH>paneH-8) y=Math.max(minY,caretY-boxH-lh*0.35);
+  y=Math.max(minY,Math.min(maxY,y));
+
   el.fbFloat.style.left=x+'px';
   el.fbFloat.style.top=y+'px';
 }
@@ -1829,7 +1851,16 @@ function bindEvents(){
   el.newBtn.onclick=()=>toggleNewOverlay(true);
   el.questionWinClose.onclick=()=>toggleWindow(el.questionWin,false);
   el.terminalWinClose.onclick=()=>toggleWindow(el.terminalWin,false);
-  el.runCodeBtn.onclick=runCodeInTerminal;
+  syncTerminalAutoOpenCheckboxes(state.autoOpenDoctestTerminal);
+  if(el.terminalAutoOpenTop){
+    el.terminalAutoOpenTop.addEventListener('change',()=>syncTerminalAutoOpenCheckboxes(el.terminalAutoOpenTop.checked));
+  }
+  if(el.terminalAutoOpenStrip){
+    el.terminalAutoOpenStrip.addEventListener('change',()=>syncTerminalAutoOpenCheckboxes(el.terminalAutoOpenStrip.checked));
+  }
+  if(el.runDoctestsBtn) el.runDoctestsBtn.onclick=()=>runCodeInTerminal({ openTerminal: state.autoOpenDoctestTerminal });
+  if(el.runDoctestsTermBtn) el.runDoctestsTermBtn.onclick=()=>runCodeInTerminal({ openTerminal: true });
+  el.runCodeBtn.onclick=()=>runCodeInTerminal({ openTerminal: true });
   el.clearTermBtn.onclick=()=>{el.terminalOutput.textContent='(cleared)';};
 
   el.fontSlider.oninput=()=>setEditorFont(Number(el.fontSlider.value));
@@ -1897,8 +1928,8 @@ function bindEvents(){
   window.addEventListener('resize',()=>{
     applyResponsiveFont();
     syncGutterToEditorScroll();
-    updateFloatingFeedbackPosition();
     if(state.helperEnabled) autoExpandHelperForContent();
+    updateFloatingFeedbackPosition();
   });
 
   el.collapse.onclick=()=>{
