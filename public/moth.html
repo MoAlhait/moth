@@ -162,15 +162,47 @@ code,pre{font-family:var(--mono)}
 .rtabs{height:34px;display:flex;align-items:center;gap:8px;padding:0 8px;border-bottom:1px solid var(--border);overflow:auto}
 .rtab{font:10px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text3);cursor:pointer;padding:6px 8px;border-radius:6px;white-space:nowrap;background:transparent}
 .rtab.on{background:rgba(56,189,248,.12);color:var(--cyan)}
-.rpanel{position:absolute;inset:34px 0 0 0;padding:10px;overflow:auto;display:none}
+.rpanel{position:absolute;inset:34px 0 0 0;padding:12px 14px 16px;overflow:auto;display:none}
 .rpanel.on{display:block}
-.cardx{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px}
-.cardx h4{font:500 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
-.cardx p,.cardx li{font-size:12px;color:var(--text2);line-height:1.6}
-.cardx code{font-family:var(--mono);color:var(--cyan);font-size:11px}
+.rpanel>h3:first-child{margin-top:0}
+.rpanel h3{font-size:13px;font-weight:600;color:var(--text);margin:18px 0 10px;line-height:1.35}
+.rpanel>h3:first-child{margin-top:4px}
+.rpanel p,.rpanel li{font-size:13px;line-height:1.65;color:var(--text2)}
+.rpanel p{margin:0 0 14px}
+.rpanel p:last-child{margin-bottom:0}
+.rpanel ul{margin:0 0 14px;padding-left:20px}
+.rpanel ul li{margin-bottom:8px}
+.rpanel strong,.cardx strong{color:var(--text);font-weight:600}
+.refSheet,.refDoc{font-size:13px;line-height:1.65;color:var(--text2)}
+.refSheet h3,.refDoc h3{font-size:13px;font-weight:600;color:var(--text);margin:0 0 10px}
+.refDoc .refSection,.refSheet section{margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.refDoc .refSection:last-child,.refSheet section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.refLead{margin:0 0 12px;color:var(--text2);line-height:1.65}
+.refCode{display:block;margin:10px 0 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;overflow:auto;font:12px/1.55 var(--mono);color:var(--text)}
+.refBullets{margin:0 0 10px;padding-left:18px;color:var(--text2)}
+.refBullets li{margin-bottom:10px;line-height:1.6}
+#chatPanel.rpanel.on{display:flex!important;flex-direction:column;overflow:hidden;padding-bottom:10px}
+.chatIntro{margin:0 0 12px;font-size:12px;line-height:1.6;color:var(--text2);flex-shrink:0}
+#chatLog{flex:1;min-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:6px 2px 14px;margin:0 -2px}
+.chatMsg{padding:12px 14px;border-radius:10px;font-size:13px;line-height:1.6;max-width:96%}
+.chatMsg.user{align-self:flex-end;background:var(--bg3);border:1px solid var(--border2);color:var(--text)}
+.chatMsg.ai{align-self:flex-start;background:var(--bg2);border:1px solid var(--border);color:var(--text2);white-space:pre-wrap;word-break:break-word}
+.chatComposer{display:flex;flex-direction:column;gap:8px;flex-shrink:0;border-top:1px solid var(--border);padding-top:12px;margin-top:4px}
+#chatInput{width:100%;min-height:56px;max-height:160px;resize:vertical;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;line-height:1.5;font-family:var(--sans)}
+#chatSend{align-self:flex-end}
+.cardx{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 14px 16px;margin-bottom:14px}
+.cardx h4{font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin:0 0 10px}
+.cardx p,.cardx li{font-size:13px;color:var(--text2);line-height:1.65}
+.cardx p{margin:0 0 12px}
+.cardx p:last-child{margin-bottom:0}
+.cardx p + p{margin-top:4px}
+.cardx ul{margin:8px 0 0;padding-left:18px}
+.cardx ul li{margin-bottom:8px}
+.cardx code{font-family:var(--mono);color:var(--cyan);font-size:12px}
 .warn{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.35)}
 .tip{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.35)}
-.rpanel pre{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:8px;overflow:auto;margin-top:6px;color:var(--text);font:11px/1.55 var(--mono)}
+.rpanel pre,.cardx pre{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;overflow:auto;margin:10px 0 0;color:var(--text);font:12px/1.55 var(--mono)}
+.cardx pre:first-child{margin-top:0}
 .swcard{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:10px}
 .swnum{font:500 9px var(--mono);color:var(--text3);letter-spacing:.09em;text-transform:uppercase;margin-bottom:4px}
 .swlabel{font:500 11px var(--mono);color:var(--cyan);margin-bottom:6px}
@@ -300,6 +332,14 @@ code,pre{font-family:var(--mono)}
       <div class="rpanel" id="syntaxPanel"></div>
       <div class="rpanel" id="gotchasPanel"></div>
       <div class="rpanel" id="refPanel"></div>
+      <div class="rpanel chatPanel" id="chatPanel">
+        <p class="chatIntro">Ask about this problem, your approach, or Python in general. Use <strong>Ctrl+Enter</strong> (Mac: <strong>⌘+Enter</strong>) to send.</p>
+        <div class="chatLog" id="chatLog"></div>
+        <div class="chatComposer">
+          <textarea id="chatInput" placeholder="Message the tutor…" spellcheck="true"></textarea>
+          <button type="button" class="topbtn" id="chatSend">send</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="popWin" id="questionWin" style="left:72px;top:74px;width:480px;height:260px;">
@@ -347,7 +387,7 @@ const state={
   problems:[], idx:0, collapsed:false, sw:268,
   lastLineCount:1, feedbackTimer:null, liveCache:new Map(),
   solutions:[], stepDone:[],
-  stepsCache:{}, supportCache:{}, questionDigestCache:{},
+  stepsCache:{}, supportCache:{}, questionDigestCache:{}, chatByProblem:{},
   baseFont:23,
   similarDifficulty:'same difficulty',
   helperEnabled:true,
@@ -372,7 +412,8 @@ const el={
   runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
   fontSlider:document.getElementById('fontSlider'), layout:document.getElementById('layout'), handle:document.getElementById('handle'), collapse:document.getElementById('collapse'),
   rtabs:document.getElementById('rtabs'), hintsPanel:document.getElementById('hintsPanel'), stepsPanel:document.getElementById('stepsPanel'),
-  syntaxPanel:document.getElementById('syntaxPanel'), gotchasPanel:document.getElementById('gotchasPanel'), refPanel:document.getElementById('refPanel')
+  syntaxPanel:document.getElementById('syntaxPanel'), gotchasPanel:document.getElementById('gotchasPanel'), refPanel:document.getElementById('refPanel'),
+  chatPanel:document.getElementById('chatPanel'), chatLog:document.getElementById('chatLog'), chatInput:document.getElementById('chatInput'), chatSend:document.getElementById('chatSend')
 };
 
 function escapeHtml(s){
@@ -985,10 +1026,10 @@ function renderSupportFallback(i){
   const p=state.problems[i];
   const steps=(p.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('');
   const fallback={
-    hints:`<div class="cardx"><h4>focus</h4><p>Work checkpoint-by-checkpoint for <code>${escapeHtml(p.name||'Q')}</code>.</p></div><div class="cardx"><h4>starter first</h4><p>Fill placeholders before refactoring style. Preserve function signatures.</p></div><div class="cardx"><h4>test mentally</h4><p>Walk through a tiny input after each edit to confirm state transitions.</p></div><div class="cardx"><h4>edge cases</h4><p>Check empty/min boundaries and stop conditions.</p></div>`,
-    syntax:`<div class="cardx"><h4>if / return</h4><pre>if condition:\n    return value</pre></div><div class="cardx"><h4>loop pattern</h4><pre>while cond:\n    # update state\n    pass</pre></div><div class="cardx"><h4>iterator stop</h4><pre>if done:\n    raise StopIteration</pre></div><div class="cardx"><h4>state update</h4><pre>value = current\ncurrent += 1\nreturn value</pre></div>`,
-    gotchas:`<div class="cardx warn"><h4>off-by-one</h4><p>Double-check boundary comparisons.</p></div><div class="cardx warn"><h4>state reset</h4><p>Reset state in the correct method.</p></div><div class="cardx warn"><h4>return timing</h4><p>Capture value before mutating cursor.</p></div><div class="cardx tip"><h4>checkpoints</h4><p>Map code blocks to the checkpoint chips.</p></div><div class="cardx tip"><h4>small tests</h4><p>Use tiny examples after each change.</p></div><div class="cardx tip"><h4>progressive build</h4><p>Make one working piece at a time.</p></div>`,
-    ref:`<h3>Current Problem</h3><p><code>${escapeHtml(p.title||'Problem')}</code></p><h3>Checkpoint Plan</h3><ul>${steps || '<li>Implement core logic</li>'}</ul><h3>Mental model</h3><p>Implement each checkpoint as a small verifiable unit.</p>`
+    hints:`<div class="cardx"><h4>Focus</h4><p>Work <strong>checkpoint-by-checkpoint</strong> for <code>${escapeHtml(p.name||'Q')}</code>.</p></div><div class="cardx"><h4>Starter first</h4><p>Fill placeholders before refactoring. Keep <strong>function signatures</strong> intact.</p></div><div class="cardx"><h4>Test mentally</h4><p>Walk through a <strong>tiny input</strong> after each edit to confirm state changes.</p></div><div class="cardx"><h4>Edge cases</h4><p>Check <strong>empty</strong> inputs, minimum boundaries, and stop conditions.</p></div>`,
+    syntax:`<div class="refDoc syntaxRef"><section class="refSection"><h3>Conditionals</h3><p class="refLead">Use <strong>if</strong> / <strong>elif</strong> / <strong>else</strong> to branch. The first true condition runs its block.</p><pre class="refCode">if x &lt; 0:\n    return 0\nelif x &gt; 100:\n    return 100\nreturn x</pre></section><section class="refSection"><h3>Loops</h3><p class="refLead"><strong>for</strong> iterates a sequence; <strong>while</strong> repeats while a condition holds.</p><pre class="refCode">for item in items:\n    process(item)\n\nwhile n &gt; 0:\n    n -= 1</pre></section><section class="refSection"><h3>Functions</h3><p class="refLead"><strong>def</strong> defines callable code. Parameters receive arguments by position or name.</p><pre class="refCode">def add(a, b=0):\n    return a + b</pre></section><section class="refSection"><h3>Comprehensions</h3><p class="refLead">Build lists/dicts/sets in one expression with optional <strong>if</strong> filter.</p><pre class="refCode">squares = [x*x for x in range(10) if x % 2 == 0]</pre></section></div>`,
+    gotchas:`<div class="cardx warn"><h4>Off-by-one</h4><p>Compare indices and ranges carefully. Use <strong>&lt;</strong> vs <strong>&lt;=</strong> consistently with how you index.</p></div><div class="cardx warn"><h4>State reset</h4><p>Reset accumulators and iterators in the right place so <strong>each call</strong> starts from a known state.</p></div><div class="cardx warn"><h4>Return timing</h4><p>Save values you still need <strong>before</strong> you mutate variables that held them.</p></div><div class="cardx tip"><h4>Checkpoints</h4><p>Map each chip to one small slice of code so progress stays visible.</p></div><div class="cardx tip"><h4>Small tests</h4><p>After each edit, trace <strong>one tiny example</strong> by hand.</p></div><div class="cardx tip"><h4>Incremental build</h4><p>Get one path working first, then generalize.</p></div>`,
+    ref:`<div class="refSheet"><h3>Current problem</h3><p><code>${escapeHtml(p.title||'Problem')}</code></p><h3>Checkpoint plan</h3><ul>${steps || '<li>Implement core logic</li>'}</ul><h3>Mental model</h3><p>Each checkpoint is a <strong>small verifiable unit</strong>. Finish one before leaning on the next.</p></div>`
   };
   state.supportCache[i]=fallback;
   el.hintsPanel.innerHTML=fallback.hints;
@@ -1014,12 +1055,33 @@ async function generateSupportPanels(i){
   el.refPanel.innerHTML='<div class="cardx"><p>Generating AI reference...</p></div>';
 
   try{
-    const context=`Problem: ${p.title}\nTopic: ${p.topic}\nStarter:\n${p.starter}\nCheckpoints: ${(p.steps||[]).join(', ')}`;
+    const baseCtx=`Title: ${p.title}\nTopic: ${p.topic}\nStarter (context only — do not quote verbatim as a solution):\n${p.starter}`;
+    const fullCtx=`${baseCtx}\nCheckpoints: ${(p.steps||[]).join(', ')}`;
+    const syntaxSys='You author Python language reference sheets (W3Schools / open-book exam style): builtins, statements, and stdlib patterns. Never give homework-specific answers, checkpoint walkthroughs, or full solutions to the starter task.';
+    const syntaxUser=`${baseCtx}
+
+Return HTML only inside ONE wrapper:
+<div class="refDoc syntaxRef"> ... </div>
+
+This must be a Python language and library reference for concepts relevant to the TOPIC above (infer from title/topic/starter: e.g. SQL-related homework → strings, f-strings, formatting; classes → methods, self, super; iterators → yield, StopIteration).
+
+Include 6–10 sections, each:
+<section class="refSection">
+  <h3>Short feature name</h3>
+  <p class="refLead">1–2 sentences: what it does and when to use it. Wrap key terms in strong tags (open and close).</p>
+  <pre class="refCode">minimal correct Python example</pre>
+  <ul class="refBullets"><li>optional bullet</li></ul>  (omit the list if not needed)
+</section>
+
+Hard rules:
+- Do not name checkpoint labels, do not solve this assignment, do not paste required query or logic from the homework.
+- No markdown (no asterisk emphasis or hash headings in output). HTML tags only: div, section, h3, p, strong, em, code, pre, ul, li, br.
+- Examples must be generic/teaching snippets, not their exact task.`;
     const [hintsRaw, syntaxRaw, gotchasRaw, refRaw] = await Promise.all([
-      callAnthropic([{role:'user',content:`${context}\n\nCreate exactly 4 hint cards as HTML only. Format each as <div class=\"cardx\"><h4>TITLE</h4><p>BODY</p></div>. No final solution.`}], 'You are a CS tutor.', 700),
-      callAnthropic([{role:'user',content:`${context}\n\nCreate exactly 4 syntax cards as HTML only. Use format <div class=\"cardx\"><h4>TITLE</h4><p>NOTE</p><pre>CODE</pre></div>. Keep snippets short.`}], 'You are a CS tutor.', 850),
-      callAnthropic([{role:'user',content:`${context}\n\nCreate exactly 6 gotcha/tip cards as HTML only. Use <div class=\"cardx warn\"> or <div class=\"cardx tip\">, plus <h4> and <p>.`}], 'You are a CS tutor.', 800),
-      callAnthropic([{role:'user',content:`${context}\n\nCreate concise problem-specific reference HTML with sections Core concept, Key syntax, Common mistakes, Mental model using <h3>,<p>,<ul>,<li>,<code>,<pre>.`}], 'You are a CS tutor.', 900),
+      callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 4 hint cards as HTML only. Each: <div class="cardx"><h4>TITLE</h4><p>BODY</p></div>. In BODY use <strong> for critical terms. One or two short paragraphs per card (use </p><p> if two). No final solution code.`}], 'You are a CS tutor.', 750),
+      callAnthropic([{role:'user',content:syntaxUser}], syntaxSys, 1600),
+      callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 6 gotcha/tip cards as HTML only. Alternate problem-relevant mistakes: use <div class="cardx warn"> or <div class="cardx tip">, each with <h4> then <p>. Put the main idea in <strong> inside the first sentence. Add whitespace: one idea per paragraph; use </p><p> when two ideas.`}], 'You are a CS tutor.', 900),
+      callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate concise reference HTML wrapped in <div class="refSheet">. Sections with <h3>: Core concept, Working plan, Common pitfalls, Mental model. Use <p> with <strong> for key terms; <ul><li> for lists; <code> for identifiers. No markdown markers. Generous vertical spacing: one clear idea per paragraph.`}], 'You are a CS tutor.', 950),
     ]);
     const cached={
       hints:sanitizePanelHtml(hintsRaw).trim(),
@@ -1035,6 +1097,59 @@ async function generateSupportPanels(i){
   }catch(err){
     renderSupportFallback(i);
   }
+}
+
+function getChatThread(i){
+  if(state.chatByProblem[i]===undefined) state.chatByProblem[i]=[];
+  return state.chatByProblem[i];
+}
+
+function renderChatLog(){
+  if(!el.chatLog) return;
+  const i=state.idx;
+  if(i<0||!state.problems.length){
+    el.chatLog.innerHTML='';
+    return;
+  }
+  const thread=getChatThread(i);
+  el.chatLog.innerHTML='';
+  thread.forEach(m=>{
+    const d=document.createElement('div');
+    d.className='chatMsg '+(m.role==='user'?'user':'ai');
+    d.textContent=m.text;
+    el.chatLog.appendChild(d);
+  });
+  el.chatLog.scrollTop=el.chatLog.scrollHeight;
+}
+
+async function sendChatMessage(){
+  const i=state.idx;
+  if(i<0||!state.problems.length) return;
+  const raw=(el.chatInput.value||'').trim();
+  if(!raw) return;
+  el.chatInput.value='';
+  const thread=getChatThread(i);
+  thread.push({role:'user',text:raw});
+  renderChatLog();
+  el.chatSend.disabled=true;
+  try{
+    const p=state.problems[i];
+    const sys=`You are a patient CS tutor. The student is working on one homework problem. Help with concepts, debugging strategy, and clarifying requirements. Stay concise unless they ask for depth. Do not dump a full reference solution unless they explicitly ask for one.
+
+Problem title: ${p.title}
+Topic: ${p.topic}
+Checkpoints (context only): ${(p.steps||[]).join(', ')}
+
+Current editor code (may be partial):
+${el.editor.value.slice(0,14000)}`;
+    const messages=thread.map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}));
+    const resp=await callAnthropic(messages,sys,1800,MODEL);
+    thread.push({role:'assistant',text:(resp||'').trim()||'(no response)'});
+  }catch(err){
+    thread.push({role:'assistant',text:'Sorry — '+String(err.message||err)});
+  }
+  renderChatLog();
+  el.chatSend.disabled=false;
 }
 
 function saveCurrentSolution(){
@@ -1063,6 +1178,7 @@ function loadProblem(i){
 
   generateStepsPanel(i);
   generateSupportPanels(i);
+  renderChatLog();
   resetEditorHistory();
 }
 
@@ -1163,6 +1279,7 @@ Each item has shape: {name,title,starter,steps,topic}.
   state.supportCache={};
   state.questionDigestCache={};
   state.liveCache=new Map();
+  state.chatByProblem={};
 
   el.loading.classList.remove('show');
   el.home.classList.add('hide');
@@ -1231,6 +1348,7 @@ Each item has shape: {name,title,starter,steps,topic}.
   state.supportCache={};
   state.questionDigestCache={};
   state.liveCache=new Map();
+  state.chatByProblem={};
 
   el.loading.classList.remove('show');
   toggleNewOverlay(false);
@@ -1490,7 +1608,7 @@ function onEditorInput(){
 }
 
 function initSidebarTabs(){
-  const tabs=[['steps','stepsPanel'],['hints','hintsPanel'],['syntax','syntaxPanel'],['gotchas','gotchasPanel'],['ai ref','refPanel']];
+  const tabs=[['steps','stepsPanel'],['hints','hintsPanel'],['syntax','syntaxPanel'],['gotchas','gotchasPanel'],['ai ref','refPanel'],['chat','chatPanel']];
   el.rtabs.innerHTML='';
   tabs.forEach(([label,panel],i)=>{
     const t=document.createElement('button');
@@ -1567,6 +1685,14 @@ function bindEvents(){
 
   el.fontSlider.oninput=()=>setEditorFont(Number(el.fontSlider.value));
   setEditorFont(23);
+
+  el.chatSend.onclick=sendChatMessage;
+  el.chatInput.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){
+      e.preventDefault();
+      sendChatMessage();
+    }
+  });
 
   el.editor.addEventListener('keydown',onEditorKeyDown);
   el.editor.addEventListener('input',onEditorInput);
