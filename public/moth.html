@@ -81,10 +81,10 @@ code,pre{font-family:var(--mono)}
 .ptab{height:35px;display:flex;align-items:center;padding:0 2px;border-bottom:2px solid transparent;color:var(--text2);font:12px var(--mono);cursor:pointer;white-space:nowrap;background:transparent}
 .ptab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
 
-.editorwrap{flex:1;display:grid;grid-template-columns:52px 1fr;min-height:0}
+.editorwrap{flex:1;display:grid;grid-template-columns:52px 1fr;min-height:0;overflow:visible}
 .gutter{background:var(--bg1);border-right:1px solid var(--border);padding:10px 8px;font:12px/1.75 var(--mono);color:var(--text3);text-align:right;user-select:none;overflow:hidden;white-space:pre;pointer-events:none;min-height:0}
 #gutterInner{margin:0;transform:translateY(0);will-change:transform}
-.editorPane{position:relative;min-height:0;background:var(--bg);overflow:hidden;isolation:isolate}
+.editorPane{position:relative;min-height:0;background:var(--bg);overflow:visible;isolation:isolate}
 #currentLine{position:absolute;left:0;right:0;height:21px;background:#2C313C;pointer-events:none;z-index:0}
 #editorHl,#editor{position:absolute;inset:0;width:100%;height:100%;padding:10px 12px 24vh 12px;border:none;outline:none;resize:none;overflow:auto;white-space:pre;tab-size:4;font:12px/1.75 var(--mono);font-variant-ligatures:none;-webkit-font-variant-ligatures:none}
 #editorHl{pointer-events:none;user-select:none;-webkit-user-select:none;color:var(--lav);z-index:1}
@@ -110,9 +110,9 @@ code,pre{font-family:var(--mono)}
   transform:translateY(4px);
   transition:opacity .12s ease, transform .12s ease;
   resize:both;
-  overflow:auto;
+  overflow:visible;
   min-height:90px;
-  max-height:80vh;
+  max-height:none;
 }
 #fbFloat.show{opacity:1;transform:translateY(0)}
 #fbFloat.ok{border-color:rgba(152,195,121,.55)}
@@ -124,7 +124,7 @@ code,pre{font-family:var(--mono)}
   padding:6px 10px;border-bottom:1px solid var(--border);
   background:rgba(44,49,60,.92);font:11px var(--mono);color:var(--text2);cursor:move;
 }
-#fbFloatBody{padding:10px 12px;font-size:15px;line-height:1.5}
+#fbFloatBody{padding:10px 12px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow:visible;max-height:none}
 
 /* Pastel syntax colors */
 .t-com{color:#5c6370}
@@ -209,6 +209,8 @@ code,pre{font-family:var(--mono)}
 .refBullets{margin:4px 0 16px;padding-left:22px;color:var(--text2)}
 .refBullets li{margin-bottom:12px;line-height:1.75}
 .synSimple{display:block;padding-bottom:8px}
+h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10px;letter-spacing:.02em;line-height:1.35}
+.synSimple>h3.synSection:first-child{margin-top:0}
 .synSimple .synItem{margin:0 0 28px;padding:0 0 24px;border-bottom:1px solid var(--border)}
 .synSimple .synItem:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
 .synKw{font:600 13px var(--mono);color:var(--cyan);margin:0 0 10px;letter-spacing:.03em}
@@ -428,7 +430,7 @@ const MODEL='claude-haiku-4-5-20251001';
 const THINKING_MODEL='claude-sonnet-4-6';
 /** Set true only if you want Sonnet for analyze/similar (costly). Default: Haiku everywhere except rare manual toggles. */
 const USE_SONNET_FOR_HEAVY_GENERATION=false;
-const PANEL_CACHE_VER=8;
+const PANEL_CACHE_VER=9;
 
 const state={
   problems:[], idx:0, collapsed:false, sw:268,
@@ -792,11 +794,8 @@ function applyResponsiveFont(){
 
 function updateHelperFontFromWidgetSize(){
   const helperRect = el.fbFloat.getBoundingClientRect();
-  const h = helperRect.height || 120;
   const w = helperRect.width || 260;
-  const sizeByHeight = h * 0.12;
-  const sizeByWidth = w * 0.055;
-  const helperBody = Math.max(13, Math.min(sizeByHeight, sizeByWidth));
+  const helperBody = Math.max(13, Math.min(17, w * 0.052));
   const helperHead = Math.max(10, helperBody * 0.76);
   el.fbFloatBody.style.fontSize = helperBody + 'px';
   el.fbFloatBody.style.lineHeight = (helperBody * 1.45) + 'px';
@@ -805,18 +804,16 @@ function updateHelperFontFromWidgetSize(){
 
 function autoExpandHelperForContent(){
   const paneW = el.editorPane.clientWidth || 900;
-  const paneH = el.editorPane.clientHeight || 600;
   const currentW = el.fbFloat.offsetWidth || 260;
 
   const preferredW = Math.max(currentW, Math.floor(paneW * 0.42));
   const width = Math.min(Math.max(260, paneW - 24), preferredW);
   el.fbFloat.style.width = width + 'px';
 
-  // Let content fully flow, then grow the widget to fit.
   el.fbFloat.style.height = 'auto';
-  const needed = el.fbFloat.scrollHeight + 8;
-  const cap = Math.max(140, Math.floor(paneH * 0.8));
-  el.fbFloat.style.height = Math.min(needed, cap) + 'px';
+  el.fbFloat.style.minHeight = '90px';
+  const needed = el.fbFloat.scrollHeight;
+  el.fbFloat.style.height = needed + 'px';
 
   updateHelperFontFromWidgetSize();
 }
@@ -1108,15 +1105,30 @@ function renderGotchas(gotchas){
   return gotchas.map(g=>`<div class="cardx ${g.type==='tip'?'tip':'warn'}"><h4>${escapeHtml(g.title||'gotcha')}</h4><p>${escapeHtml(g.body||'')}</p></div>`).join('');
 }
 
-function buildSyntaxFallbackSheet(){
-  const ex=(kw,def,code)=>`<div class="synItem"><div class="synKw">${kw}</div><p class="synDef">${def}</p><pre class="synEx">${code}</pre></div>`;
+function buildSyntaxFallbackSheet(p){
+  const ex=(kw,def,code)=>`<div class="synItem"><div class="synKw">${escapeHtml(kw)}</div><p class="synDef">${def}</p><pre class="synEx">${escapeHtml(code)}</pre></div>`;
+  const sec=(t)=>`<h3 class="synSection">${escapeHtml(t)}</h3>`;
+  const lead=`<p class="synDef" style="margin:0 0 18px">Patterns for the <strong>kind</strong> of problem you are doing—vocabulary and shapes to recognize—not a walkthrough of your specific starter.</p>`;
+  const topic=((p&&p.topic)||'').toLowerCase();
+  const sqlish=/\b(sql|database|query|join|select|aggregate)\b/.test(topic)||(p&&p.starter&&/\b(FROM|WHERE|SELECT|JOIN)\b/i.test(p.starter));
+  let sqlBlock='';
+  if(sqlish){
+    sqlBlock=
+      sec('SQL building blocks')+
+      ex('SELECT / FROM','Pick columns from a relation; qualify with table alias when joining.',`SELECT b.title, b.price\nFROM books b\nLIMIT 5;`)+
+      ex('WHERE vs HAVING','<strong>WHERE</strong> filters rows before aggregation; <strong>HAVING</strong> filters groups after GROUP BY.',`SELECT category, COUNT(*) AS n\nFROM books\nGROUP BY category\nHAVING n >= 2;`)+
+      ex('JOIN … ON','Combine rows that match a key; always tie tables in <strong>ON</strong>.',`SELECT c.name, o.id\nFROM customers c\nJOIN orders o ON o.customer_id = c.id;`);
+  }
   return `<div class="refDoc syntaxRef synSimple">`+
-    ex('SELECT / *','Pick columns; <strong>*</strong> means all columns from FROM.',`SELECT title, price\nFROM books;\n\nSELECT *\nFROM orders\nLIMIT 5;`)+
-    ex('WHERE','Row filter before grouping.',`SELECT *\nFROM books\nWHERE price < 20\n  AND in_print = 1;`)+
-    ex('JOIN … ON','Match rows across tables.',`SELECT c.name, o.id\nFROM customers c\nJOIN orders o ON o.customer_id = c.id;`)+
-    ex('GROUP BY / HAVING','Aggregate per group; HAVING filters groups.',`SELECT category, COUNT(*) n\nFROM books\nGROUP BY category\nHAVING COUNT(*) >= 2;`)+
-    ex('def / return','Define a function; return sends a value back.',`def total(xs):\n    s = 0\n    for x in xs:\n        s += x\n    return s`)+
-    ex('for / in','Loop over a sequence.',`for n in range(3):\n    print(n * n)`)+
+    sec('How this tab helps')+lead+
+    sec('Recursion and “smaller subproblem”')+
+    ex('Base case','The input where you <strong>stop calling</strong> and return a concrete value. Every recursion needs one.',`def countdown(n):\n    if n <= 0:          # base\n        return          # nothing left to do\n    ____                 # recursive path`)+
+    ex('Recursive step + combine','Call on a <strong>smaller</strong> piece, then merge what comes back.',`def sum_depth(node):\n    if node is None:\n        return 0\n    left = sum_depth(____)\n    right = sum_depth(____)\n    return ____`) +
+    sec('Trees / mutable walks (shape only)')+
+    ex('Visit children','Often: handle current node, then <strong>for each child</strong> recurse. Mutating helpers sometimes loop until a local invariant holds.',`def walk(node):\n    if not node.children:\n        return\n    while ____:\n        ____\n    for ch in node.children:\n        walk(ch)`) +
+    sqlBlock+
+    sec('Illustrative doctest (not your homework)')+
+    ex('ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)','Your real checks are in the app’s <strong>doctests</strong> strip and terminal. This only shows how <code>&gt;&gt;&gt;</code> lines and expected output teach behavior.',`def toy_prune(node, keep):\n    """Toy tree: keep smallest labels (illustration; ____ not filled).\n\n    >>> r = Node(6, [Node(9), Node(2)])\n    >>> toy_prune(r, 1)\n    >>> r.children[0].label\n    2\n    """\n    while ____:\n        ____\n    for c in node.children:\n        toy_prune(c, keep)\n`)+
   `</div>`;
 }
 
@@ -1126,7 +1138,7 @@ function renderSupportFallback(i){
   const cpFallback=(p.steps||['Implement core logic','Handle edge cases','Return correct result']).map(s=>`<section class="refSection"><h3>${escapeHtml(s)}</h3><p class="refLead">Break this into a <strong>small unit of code</strong> you can test. Describe what “done” looks like before you move to the next checkpoint.</p></section>`).join('');
   const fallback={
     hints:`<div class="cardx"><h4>Focus</h4><p>Work <strong>checkpoint-by-checkpoint</strong> for <code>${escapeHtml(p.name||'Q')}</code>.</p></div><div class="cardx"><h4>Starter first</h4><p>Fill placeholders before refactoring. Keep <strong>function signatures</strong> intact.</p></div><div class="cardx"><h4>Test mentally</h4><p>Walk through a <strong>tiny input</strong> after each edit to confirm state changes.</p></div><div class="cardx"><h4>Edge cases</h4><p>Check <strong>empty</strong> inputs, minimum boundaries, and stop conditions.</p></div>`,
-    syntax:buildSyntaxFallbackSheet(),
+    syntax:buildSyntaxFallbackSheet(p),
     checkpoints:`<div class="refDoc cpGuide">${cpFallback}</div>`,
     gotchas:`<div class="cardx warn"><h4>Off-by-one</h4><p>Compare indices and ranges carefully. Use <strong>&lt;</strong> vs <strong>&lt;=</strong> consistently with how you index.</p></div><div class="cardx warn"><h4>State reset</h4><p>Reset accumulators and iterators in the right place so <strong>each call</strong> starts from a known state.</p></div><div class="cardx warn"><h4>Return timing</h4><p>Save values you still need <strong>before</strong> you mutate variables that held them.</p></div><div class="cardx tip"><h4>Checkpoints</h4><p>Map each chip to one small slice of code so progress stays visible.</p></div><div class="cardx tip"><h4>Small tests</h4><p>After each edit, trace <strong>one tiny example</strong> by hand.</p></div><div class="cardx tip"><h4>Incremental build</h4><p>Get one path working first, then generalize.</p></div>`,
     ref:`<div class="refSheet"><h3>Current problem</h3><p><code>${escapeHtml(p.title||'Problem')}</code></p><h3>Checkpoint plan</h3><ul>${steps || '<li>Implement core logic</li>'}</ul><h3>Mental model</h3><p>Each checkpoint is a <strong>small verifiable unit</strong>. Finish one before leaning on the next.</p></div>`
@@ -1160,24 +1172,35 @@ async function generateSupportPanels(i){
   try{
     const baseCtx=`Title: ${p.title}\nTopic: ${p.topic}\nStarter (context only — do not quote verbatim as a solution):\n${p.starter}`;
     const fullCtx=`${baseCtx}\nCheckpoints: ${(p.steps||[]).join(', ')}\nDoctests:\n${(p.doctests||'').trim()}`;
-    const syntaxSys='Fast, cheap reference: only syntax the student is likely to need for THIS starter and checkpoints—not a language encyclopedia. Each item: short label, brief explanation, small example. Prefer Haiku-friendly brevity. Toy names in SQL examples only.';
-    const syntaxUser=`${baseCtx}
+    const syntaxSys=`You write the **syntax / patterns** sidebar for a CS homework coach. Many students do not yet understand the *ideas* behind the topic (e.g. what recursion even means). Your job: teach **conceptual building blocks**—how to think in patterns (base case, recursive step, aggregation, tree walks, SQL shapes)—so someone lost thinks “that is the shape I need,” **without** giving the graded solution to their actual task.
 
-Return HTML only:
+Never implement their main assignment, never paste their problem’s doctest as the answer, and never walk step-by-step through their starter’s function names. Use **toy names only** (Node, Widget, books/orders, fake APIs). Prefer **pseudo-code with ____ holes** over finished code. When SQL is relevant, keep examples generic.
+
+You may reference that doctests exist to teach **how to read** >>> blocks, using a clearly fake illustration unrelated to their homework.`;
+    const syntaxUser=`${fullCtx}
+
+Return HTML only, wrapped once in:
 <div class="refDoc syntaxRef synSimple"> ... </div>
 
-Goal: a lean cheat sheet of constructs that plausibly apply to this problem (read title, topic, starter, checkpoints). Omit features the assignment clearly will not use.
+STRUCTURE (required):
+1) <h3 class="synSection">Ideas you might need</h3>
+   <p class="synDef">2–4 sentences in plain language: what kind of CS task this is (infer from title, topic, checkpoints, starter shape) and how this tab helps without spoiling their solution.</p>
 
-Include 8–12 synItems total (not more). Each synItem MUST be:
+2) Then **7–11** synItems (concepts, not their checkpoint labels as synKw). Each:
 <div class="synItem">
-  <div class="synKw">KEYWORD OR CLAUSE</div>
-  <p class="synDef">1–3 sentences: what it does in the context of this kind of task. Use strong tags for the keyword.</p>
-  <pre class="synEx">2–6 lines of example code (SQL or Python) that illustrate usage—keep examples compact.</pre>
+  <div class="synKw">PATTERN OR CONSTRUCT NAME</div>
+  <p class="synDef">What this pattern is for in **this class of problem**, when you reach for it, and what “done” feels like. Use <strong> on key terms. Do not say “write your append function” or tie instructions to their exact API.</p>
+  <pre class="synEx">Short pseudo-code or toy example with ____ placeholders OR 4–10 lines using fake names only</pre>
+  Optional <p class="synNote">One sentence linking the idea to how a doctest line encodes one small behavior</p>
 </div>
 
-Balance: roughly half of the items should map to what the checkpoints imply; the rest fill obvious gaps (e.g. if SQL string homework, include a couple Python string helpers only if the starter uses them).
+Cover the **topic** (e.g. recursion → base case, trust-the-call, combining results; trees → children loop + base on leaves; SQL → SELECT/WHERE/JOIN/GROUP BY as appropriate). Skip unrelated language trivia.
 
-Rules: no identifiers copied from their starter (use books/orders/customers). No checkpoint **names** as synKw labels (concepts only). No full solution. No markdown. Tags: div, p, pre, strong, em, code, br and classes synItem synKw synDef synEx synNote only.`;
+3) **Required last synItem**: synKw must be exactly <div class="synKw">ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)</div>
+   - synDef: their real tests are in the app; this block only teaches **doctest shape** (docstring with >>> and expected lines).
+   - <pre class="synEx">: a short **fake** function with a docstring containing 2–4 >>> examples and a body full of ____ (not a complete runnable solution). May resemble tree/list/mutation *patterns* without copying their types or names.
+
+Allowed tags: div, h3, p, pre, strong, em, code, br. Allowed classes only: refDoc, syntaxRef, synSimple, synSection, synItem, synKw, synDef, synEx, synNote. No markdown fences. No starter identifiers.`;
     const cpGuideSys='You write checkpoint-focused implementation guidance tied to the problem steps: what each checkpoint means in code, how to verify it, and common mistakes. This is not the language cheat-sheet tab—here you may name the checkpoints and reference the starter structure, but do not dump a complete final answer.';
     const cpGuideUser=`${fullCtx}
 
@@ -1193,7 +1216,7 @@ Create exactly one <section class="refSection"> per checkpoint label listed in t
 Style matches earlier “sectioned” sidebar guides (refSection / refLead / refCode). No markdown. Allowed tags: div, section, h3, p, strong, em, code, pre, ul, li, br.`;
     const [hintsRaw, syntaxRaw, cpRaw, gotchasRaw, refRaw] = await Promise.all([
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 4 hint cards as HTML only. Each: <div class="cardx"><h4>TITLE</h4><p>BODY</p></div>. Strategy only: use <strong> for critical terms. Use </p><p> between separate ideas for air. Do not paste SQL that references their tables/columns; do not give a full solution.`}], 'You are a CS tutor.', 500),
-      callAnthropic([{role:'user',content:syntaxUser}], syntaxSys, 2200, MODEL),
+      callAnthropic([{role:'user',content:syntaxUser}], syntaxSys, 3800, MODEL),
       callAnthropic([{role:'user',content:cpGuideUser}], cpGuideSys, 1400, MODEL),
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 6 gotcha/tip cards as HTML only. Use <div class="cardx warn"> or <div class="cardx tip">, each with <h4> then <p>. Put the main idea in <strong> in the first sentence. Use </p><p> between ideas for vertical space. Avoid pasting their exact SQL or naming their specific tables; speak in general patterns (joins, HAVING vs WHERE, grouping) unless naming is unavoidable.`}], 'You are a CS tutor.', 650),
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate concise reference HTML wrapped in <div class="refSheet">. Sections with <h3>: Core concept, Working plan, Common pitfalls, Mental model. Use <p> with <strong> for key terms; <ul><li> for lists; <code> for identifiers. No markdown markers. Generous vertical spacing: one clear idea per paragraph.`}], 'You are a CS tutor.', 700),
@@ -1875,6 +1898,7 @@ function bindEvents(){
     applyResponsiveFont();
     syncGutterToEditorScroll();
     updateFloatingFeedbackPosition();
+    if(state.helperEnabled) autoExpandHelperForContent();
   });
 
   el.collapse.onclick=()=>{
