@@ -153,6 +153,26 @@ code,pre{font-family:var(--mono)}
   padding:8px 12px;
   white-space:normal;
 }
+.doctestPanel{
+  border-bottom:1px solid var(--border);
+  background:rgba(24,28,34,.95);
+  padding:8px 12px 10px;
+}
+.doctestLab{font:11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px}
+.doctestPre{
+  margin:0;
+  font:12px/1.45 var(--mono);
+  color:var(--text);
+  white-space:pre-wrap;
+  word-break:break-word;
+  max-height:140px;
+  overflow:auto;
+  background:#11151c;
+  border:1px solid var(--border2);
+  border-radius:8px;
+  padding:8px 10px;
+}
+.doctestPanel.empty .doctestPre{color:var(--text3);font-style:italic;background:transparent;border-style:dashed}
 
 .handle{position:relative;background:var(--border);cursor:col-resize}
 .handle:hover{background:var(--border3)}
@@ -325,6 +345,10 @@ code,pre{font-family:var(--mono)}
     <div class="ecol">
       <div class="tabs" id="ptabs"></div>
       <div class="questionInline" id="questionInline">Open a problem to see what to build.</div>
+      <div class="doctestPanel empty" id="doctestPanel">
+        <div class="doctestLab">doctests (terminal run)</div>
+        <pre class="doctestPre" id="doctestPre">No doctests yet for this problem.</pre>
+      </div>
       <div class="editorwrap">
         <div class="gutter" id="gutter"><pre id="gutterInner">1</pre></div>
         <div class="editorPane" id="editorPane">
@@ -369,7 +393,7 @@ code,pre{font-family:var(--mono)}
   <div class="popWin" id="terminalWin" style="left:120px;top:120px;width:520px;height:320px;">
     <div class="popHead" id="terminalWinHead"><span>python terminal</span><button class="closeBtn" id="terminalWinClose">close</button></div>
     <div class="popBody">
-      <div id="terminalOutput">Run current editor code to see output.</div>
+      <div id="terminalOutput">Run executes your editor, then runs this problem’s doctests in the same namespace.</div>
       <div class="termRow">
         <button class="termBtn" id="runCodeBtn">run current tab</button>
         <button class="termBtn" id="clearTermBtn">clear</button>
@@ -404,7 +428,7 @@ const MODEL='claude-haiku-4-5-20251001';
 const THINKING_MODEL='claude-sonnet-4-6';
 /** Set true only if you want Sonnet for analyze/similar (costly). Default: Haiku everywhere except rare manual toggles. */
 const USE_SONNET_FOR_HEAVY_GENERATION=false;
-const PANEL_CACHE_VER=7;
+const PANEL_CACHE_VER=8;
 
 const state={
   problems:[], idx:0, collapsed:false, sw:268,
@@ -429,7 +453,7 @@ const el={
   goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), gutterInner:document.getElementById('gutterInner'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
   fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
-  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), copyBtn:document.getElementById('copyBtn'),
+  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), doctestPanel:document.getElementById('doctestPanel'), doctestPre:document.getElementById('doctestPre'), copyBtn:document.getElementById('copyBtn'),
   questionWin:document.getElementById('questionWin'), questionWinHead:document.getElementById('questionWinHead'), questionWinBody:document.getElementById('questionWinBody'), questionWinClose:document.getElementById('questionWinClose'),
   terminalWin:document.getElementById('terminalWin'), terminalWinHead:document.getElementById('terminalWinHead'), terminalWinClose:document.getElementById('terminalWinClose'), terminalOutput:document.getElementById('terminalOutput'),
   runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
@@ -485,6 +509,12 @@ async function extractPdfText(file){
   return chunks.join('\n').replace(/\s+\n/g,'\n').trim();
 }
 
+function coerceDoctests(raw){
+  if(typeof raw==='string') return raw.trim();
+  if(Array.isArray(raw)) return raw.map(x=>String(x).trim()).filter(Boolean).join('\n\n');
+  return '';
+}
+
 function normalizeProblem(p, idx){
   const ensurePlaceholder = (starterRaw) => {
     let starter = (typeof starterRaw === 'string' ? starterRaw : '').trimEnd();
@@ -505,7 +535,8 @@ function normalizeProblem(p, idx){
     title:p.title||`Problem ${idx+1}`,
     starter:ensurePlaceholder(p.starter),
     steps:Array.isArray(p.steps)&&p.steps.length?p.steps:['base case','core logic','return value'],
-    topic:p.topic||'general'
+    topic:p.topic||'general',
+    doctests:coerceDoctests(p.doctests)
   };
 }
 
@@ -524,7 +555,8 @@ function appendProblem(raw){
 function getQuestionPromptText(p){
   if(!p) return 'Open a problem to see its objective.';
   const checkpoints=(p.steps||[]).map(s=>`- ${s}`).join('\n');
-  return `Build: ${p.title}\nTopic: ${p.topic}\n\nWhat to do:\nImplement the starter code to satisfy the problem behavior and examples.\n\nCheckpoint plan:\n${checkpoints || '- implement core logic'}\n\nStarter:\n${p.starter || '""" YOUR CODE HERE """'}`;
+  const dt=(p.doctests||'').trim();
+  return `Build: ${p.title}\nTopic: ${p.topic}\n\nWhat to do:\nImplement the starter code to satisfy the problem behavior and examples.\n\nCheckpoint plan:\n${checkpoints || '- implement core logic'}\n\nDoctests (terminal will run these after your code):\n${dt||'(none)'}\n\nStarter:\n${p.starter || '""" YOUR CODE HERE """'}`;
 }
 
 async function generateQuestionDigest(i){
@@ -543,7 +575,7 @@ Output plain text only, with sections:
 - Constraints to watch
 - Suggested first 3 steps
 Keep concise and actionable. Do NOT provide full solution code.`;
-    const user=`Title: ${p.title}\nTopic: ${p.topic}\nStarter:\n${p.starter}\nCheckpoints: ${(p.steps||[]).join(', ')}`;
+    const user=`Title: ${p.title}\nTopic: ${p.topic}\nStarter:\n${p.starter}\nCheckpoints: ${(p.steps||[]).join(', ')}\nDoctests:\n${(p.doctests||'').trim()}`;
     const resp=await callAnthropic([{role:'user',content:user}],sys,400);
     const text=String(resp||'').replace(/```/g,'').trim();
     if(text) state.questionDigestCache[i]=text;
@@ -551,11 +583,25 @@ Keep concise and actionable. Do NOT provide full solution code.`;
   }catch{}
 }
 
+function renderDoctestStrip(){
+  const p=state.problems[state.idx];
+  const dt=(p && p.doctests && String(p.doctests).trim()) || '';
+  if(!el.doctestPre||!el.doctestPanel) return;
+  if(dt){
+    el.doctestPanel.classList.remove('empty');
+    el.doctestPre.textContent=dt;
+  }else{
+    el.doctestPanel.classList.add('empty');
+    el.doctestPre.textContent='No doctests on this problem — re-analyze with the latest moth so the model can supply them.';
+  }
+}
+
 function renderQuestionPrompt(){
   const p=state.problems[state.idx];
   const prompt=state.questionDigestCache[state.idx] || getQuestionPromptText(p);
   const short=prompt.split('\n').slice(0,2).join(' ').slice(0,240);
   el.questionInline.textContent=short + (short.length>=220?'…':'');
+  renderDoctestStrip();
   if(typeof marked!=='undefined'){
     const html = marked.parse(String(prompt||''), { breaks: true });
     // basic sanitize guard for generated content
@@ -637,8 +683,36 @@ async function runCodeInTerminal(){
   el.terminalOutput.textContent='Loading Python runtime...';
   try{
     const py=await ensurePyodide();
+    const cur=state.problems[state.idx];
+    const dtRaw=cur && typeof cur.doctests==='string' ? cur.doctests : '';
     py.globals.set('USER_CODE', el.editor.value || '');
-    await py.runPythonAsync(`import io, sys, traceback\n_buf=io.StringIO(); _err=io.StringIO()\n_oldo,_olde=sys.stdout,sys.stderr\nsys.stdout,sys.stderr=_buf,_err\ntry:\n    exec(USER_CODE, {})\nexcept Exception:\n    traceback.print_exc(file=_err)\nfinally:\n    sys.stdout,sys.stderr=_oldo,_olde\nRUN_OUTPUT=_buf.getvalue()+_err.getvalue()`);
+    py.globals.set('USER_DOCTESTS', dtRaw);
+    await py.runPythonAsync(`import io, sys, traceback, doctest
+_buf=io.StringIO(); _err=io.StringIO()
+_oldo,_olde=sys.stdout,sys.stderr
+sys.stdout,sys.stderr=_buf,_err
+_g={}
+try:
+    exec(USER_CODE, _g)
+    _raw = USER_DOCTESTS if USER_DOCTESTS is not None else ""
+    _dt = (_raw if isinstance(_raw, str) else str(_raw)).strip()
+    if _dt:
+        print()
+        print("--- doctests ---")
+        print()
+        class _DT:
+            pass
+        _DT.__doc__ = _dt
+        doctest.run_docstring_examples(_DT, _g, verbose=True, name="problem_doctests")
+    else:
+        print()
+        print("(no doctests for this problem)")
+        print()
+except Exception:
+    traceback.print_exc(file=_err)
+finally:
+    sys.stdout,sys.stderr=_oldo,_olde
+RUN_OUTPUT=_buf.getvalue()+_err.getvalue()`);
     const out=py.globals.get('RUN_OUTPUT');
     el.terminalOutput.textContent=(out && String(out).trim()) ? String(out) : '(no output)';
   }catch(err){
@@ -1015,7 +1089,7 @@ async function generateStepsPanel(i){
 Format each as: <div class="swcard"><div class="swnum">step N</div><div class="swlabel">LABEL</div><div class="swbody"><p><strong>What to do:</strong> ...</p><p><strong>Why:</strong> ...</p><p><strong>Watch out:</strong> ...</p></div></div>.
 No markdown. No code answers.`;
   try{
-    const resp=await callAnthropic([{role:'user',content:`Problem: ${p.title}\nTopic: ${p.topic}\nStarter:\n${p.starter}\n\nCheckpoints:\n${(p.steps||[]).join('\n')}`}],sys,650);
+    const resp=await callAnthropic([{role:'user',content:`Problem: ${p.title}\nTopic: ${p.topic}\nStarter:\n${p.starter}\n\nCheckpoints:\n${(p.steps||[]).join('\n')}\n\nDoctests (behavior to reach):\n${(p.doctests||'').trim()}`}],sys,650);
     const html=sanitizePanelHtml(resp).trim();
     state.stepsCache[i]=html;
     el.stepsPanel.innerHTML=html;
@@ -1085,7 +1159,7 @@ async function generateSupportPanels(i){
 
   try{
     const baseCtx=`Title: ${p.title}\nTopic: ${p.topic}\nStarter (context only — do not quote verbatim as a solution):\n${p.starter}`;
-    const fullCtx=`${baseCtx}\nCheckpoints: ${(p.steps||[]).join(', ')}`;
+    const fullCtx=`${baseCtx}\nCheckpoints: ${(p.steps||[]).join(', ')}\nDoctests:\n${(p.doctests||'').trim()}`;
     const syntaxSys='Fast, cheap reference: only syntax the student is likely to need for THIS starter and checkpoints—not a language encyclopedia. Each item: short label, brief explanation, small example. Prefer Haiku-friendly brevity. Toy names in SQL examples only.';
     const syntaxUser=`${baseCtx}
 
@@ -1218,7 +1292,7 @@ function loadProblem(i){
   renderChips();
   renderQuestionPrompt();
   generateQuestionDigest(i);
-  setFeedback('info','write under """ YOUR CODE HERE """ and pause for feedback');
+  setFeedback('info','write under """ YOUR CODE HERE """ — open terminal and run to verify doctests');
 
   generateStepsPanel(i);
   generateSupportPanels(i);
@@ -1235,17 +1309,20 @@ async function generateSimilarQuestion(){
   el.similarBtn.disabled=true;
   setFeedback('info','generating a similar question...');
   const sys=`Return ONLY a single JSON object (not an array) for ONE new practice problem.
-Fields: {name,title,starter,steps,topic}.
+Fields: {name,title,starter,steps,topic,doctests}.
 - name: short tab label
 - title: full problem title
 - starter: Python starter with """ YOUR CODE HERE """ where student types
 - steps: 2-4 word checkpoint labels, 3-6 items
 - topic: CS concept
+- doctests: REQUIRED string in Python doctest format (lines starting with >>> then expected output on following lines, exactly as the REPL would print). Must call the functions/classes from starter (after the student fills YOUR CODE HERE). Include at least 2 examples when the API allows.
 The new problem must test the SAME skills as the reference, use requested difficulty, and be materially different from previously generated questions. Do not repeat prior prompts or titles.`;
   const user=`Reference problem to vary (not copy):
 title: ${p.title}
 topic: ${p.topic}
 checkpoints: ${(p.steps||[]).join(', ')}
+reference doctests (invent new examples for your new names; same behaviors):
+${(p.doctests||'').trim()||'(none — still required: write fresh doctests for the new starter)'}
 starter template (invent a new scenario, new function names):
 ${p.starter}
 Requested difficulty: ${diff}
@@ -1254,7 +1331,7 @@ ${existing}
 Create one new similar problem.`;
   try{
     const modelSimilar=USE_SONNET_FOR_HEAVY_GENERATION?THINKING_MODEL:MODEL;
-    const resp=await callAnthropic([{role:'user',content:user}],sys,2000,modelSimilar);
+    const resp=await callAnthropic([{role:'user',content:user}],sys,2400,modelSimilar);
     let obj=parseJsonMaybe(resp);
     if(Array.isArray(obj)){obj=obj[0]}
     appendProblem(obj);
@@ -1286,10 +1363,11 @@ async function analyzeHomework(){
       sys=`You are a CS exam practice generator.
 Given past exam text, generate new questions that are SIMILAR in concept and difficulty but not copied.
 Return ONLY a JSON array of 3-5 items.
-Each item must be: {name,title,starter,steps,topic}
+Each item must be: {name,title,starter,steps,topic,doctests}
 Rules:
 - starter must include """ YOUR CODE HERE """
 - steps are 2-4 word checkpoint labels (3-6 steps depending on complexity)
+- doctests: REQUIRED per item — string in Python doctest format (>>> lines then expected output exactly as Python prints). Must exercise the starter's public functions/classes after YOUR CODE HERE is filled. At least 2 examples per item when reasonable.
 - keep the same subject area and style as the source exam
 - no verbatim copying of original question text`;
       userContent=`Past exam text (source style):\n${pdfText.slice(0,50000)}\n\nOptional user request/context:\n${raw || '(none provided)'}`;
@@ -1297,16 +1375,17 @@ Rules:
       sys=`You receive either (A) pasted homework/code to extract problems from, OR (B) a short topic/practice request only (examples: "give me a question on inheritance", "BST practice problem", "linked lists").
 Rules:
 - Always return ONLY a JSON array (never markdown outside JSON).
-Each item has shape: {name,title,starter,steps,topic}.
+Each item has shape: {name,title,starter,steps,topic,doctests}.
 - For (A): extract real problems from the pasted text.
 - For (B): invent ONE plausible CS homework-style practice problem matching the user's topic — include starter skeleton with """ YOUR CODE HERE """ and 3-6 checkpoint step labels.
 - Preserve """ YOUR CODE HERE """ in starter when you create it.
-- Steps: 2-4 word labels, not full instructions. Count: 3 for small, 4-5 medium, 5-6 longer problems.`;
+- Steps: 2-4 word labels, not full instructions. Count: 3 for small, 4-5 medium, 5-6 longer problems.
+- doctests: REQUIRED per item — string in Python doctest format (>>> then expected output lines). Must test the solution implied by the starter; at least 2 examples per item when reasonable. Never omit.`;
       userContent=`Input:\n${raw}`;
     }
 
     const modelForAnalyze=(USE_SONNET_FOR_HEAVY_GENERATION&&similarMode)?THINKING_MODEL:MODEL;
-    const resp=await callAnthropic([{role:'user',content:userContent}],sys,2800,modelForAnalyze);
+    const resp=await callAnthropic([{role:'user',content:userContent}],sys,3200,modelForAnalyze);
     const parsed=parseJsonMaybe(resp);
     let list;
     if(Array.isArray(parsed)){list=parsed}
@@ -1355,10 +1434,11 @@ async function analyzeFromModal(){
       sys=`You are a CS exam practice generator.
 Given past exam text, generate new questions that are SIMILAR in concept and difficulty but not copied.
 Return ONLY a JSON array of 3-5 items.
-Each item must be: {name,title,starter,steps,topic}
+Each item must be: {name,title,starter,steps,topic,doctests}
 Rules:
 - starter must include """ YOUR CODE HERE """
 - steps are 2-4 word checkpoint labels (3-6 steps depending on complexity)
+- doctests: REQUIRED per item — string in Python doctest format (>>> lines then expected output exactly as Python prints). Must exercise the starter's public functions/classes after YOUR CODE HERE is filled. At least 2 examples per item when reasonable.
 - keep the same subject area and style as the source exam
 - no verbatim copying of original question text`;
       userContent=`Past exam text (source style):\n${pdfText.slice(0,50000)}\n\nOptional user request/context:\n${raw || '(none provided)'}`;
@@ -1366,16 +1446,17 @@ Rules:
       sys=`You receive either (A) pasted homework/code to extract problems from, OR (B) a short topic/practice request only (examples: "give me a question on inheritance", "BST practice problem", "linked lists").
 Rules:
 - Always return ONLY a JSON array (never markdown outside JSON).
-Each item has shape: {name,title,starter,steps,topic}.
+Each item has shape: {name,title,starter,steps,topic,doctests}.
 - For (A): extract real problems from the pasted text.
 - For (B): invent ONE plausible CS homework-style practice problem matching the user's topic — include starter skeleton with """ YOUR CODE HERE """ and 3-6 checkpoint step labels.
 - Preserve """ YOUR CODE HERE """ in starter when you create it.
-- Steps: 2-4 word labels, not full instructions. Count: 3 for small, 4-5 medium, 5-6 longer problems.`;
+- Steps: 2-4 word labels, not full instructions. Count: 3 for small, 4-5 medium, 5-6 longer problems.
+- doctests: REQUIRED per item — string in Python doctest format (>>> then expected output lines). Must test the solution implied by the starter; at least 2 examples per item when reasonable. Never omit.`;
       userContent=`Input:\n${raw}`;
     }
 
     const modelForAnalyze=(USE_SONNET_FOR_HEAVY_GENERATION&&similarMode)?THINKING_MODEL:MODEL;
-    const resp=await callAnthropic([{role:'user',content:userContent}],sys,2800,modelForAnalyze);
+    const resp=await callAnthropic([{role:'user',content:userContent}],sys,3200,modelForAnalyze);
     const parsed=parseJsonMaybe(resp);
     let list;
     if(Array.isArray(parsed)){list=parsed}
