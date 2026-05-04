@@ -437,9 +437,6 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
 <script>
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
-const THINKING_MODEL='claude-sonnet-4-6';
-/** Set true only if you want Sonnet for analyze/similar (costly). Default: Haiku everywhere except rare manual toggles. */
-const USE_SONNET_FOR_HEAVY_GENERATION=false;
 const PANEL_CACHE_VER=9;
 
 const state={
@@ -1377,8 +1374,7 @@ Previously generated problem titles (avoid repeating):
 ${existing}
 Create one new similar problem.`;
   try{
-    const modelSimilar=USE_SONNET_FOR_HEAVY_GENERATION?THINKING_MODEL:MODEL;
-    const resp=await callAnthropic([{role:'user',content:user}],sys,2400,modelSimilar);
+    const resp=await callAnthropic([{role:'user',content:user}],sys,2400,MODEL);
     let obj=parseJsonMaybe(resp);
     if(Array.isArray(obj)){obj=obj[0]}
     appendProblem(obj);
@@ -1431,8 +1427,7 @@ Each item has shape: {name,title,starter,steps,topic,doctests}.
       userContent=`Input:\n${raw}`;
     }
 
-    const modelForAnalyze=(USE_SONNET_FOR_HEAVY_GENERATION&&similarMode)?THINKING_MODEL:MODEL;
-    const resp=await callAnthropic([{role:'user',content:userContent}],sys,3200,modelForAnalyze);
+    const resp=await callAnthropic([{role:'user',content:userContent}],sys,3200,MODEL);
     const parsed=parseJsonMaybe(resp);
     let list;
     if(Array.isArray(parsed)){list=parsed}
@@ -1502,8 +1497,7 @@ Each item has shape: {name,title,starter,steps,topic,doctests}.
       userContent=`Input:\n${raw}`;
     }
 
-    const modelForAnalyze=(USE_SONNET_FOR_HEAVY_GENERATION&&similarMode)?THINKING_MODEL:MODEL;
-    const resp=await callAnthropic([{role:'user',content:userContent}],sys,3200,modelForAnalyze);
+    const resp=await callAnthropic([{role:'user',content:userContent}],sys,3200,MODEL);
     const parsed=parseJsonMaybe(resp);
     let list;
     if(Array.isArray(parsed)){list=parsed}

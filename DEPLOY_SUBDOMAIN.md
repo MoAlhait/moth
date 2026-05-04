@@ -23,7 +23,8 @@ git push
 In Vercel project settings, add:
 
 - `ANTHROPIC_API_KEY` = your real key
-- `ANTHROPIC_MODEL` = `claude-haiku-4-5-20251001` (recommended for speed/cost)
+- `ANTHROPIC_MODEL` = `claude-haiku-4-5-20251001` (optional fallback when the client omits `model`; moth uses Haiku in the UI)
+- Do **not** set Sonnet here unless you intend to pay more: the API route maps Sonnet/Opus requests to Haiku unless `ANTHROPIC_ALLOW_SONNET=true` (or `ANTHROPIC_ALLOW_PREMIUM_MODELS=true`)
 
 ## 4) Add subdomain
 
