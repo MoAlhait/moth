@@ -70,6 +70,7 @@ code,pre{font-family:var(--mono)}
   box-shadow:0 8px 20px rgba(0,0,0,.25); display:none; overflow:hidden;
 }
 .similarMenu.show{display:block}
+#helperMenu.similarMenu{min-width:240px}
 .similarOpt{
   width:100%; text-align:left; padding:8px 10px; border:none; background:transparent; color:var(--text2); font-size:12px; cursor:pointer;
 }
@@ -318,8 +319,15 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
     <div class="left"><span class="toplogo" id="goHome">moth/</span><span class="session" id="sessionName">session</span></div>
     <div class="right">
       <span class="sizelbl">size</span><input id="fontSlider" type="range" min="10" max="24" step="1" value="23" />
-      <button class="topbtn" id="helperModeBtn">helper: follow</button>
-      <button class="topbtn" id="helperToggleBtn">helper: on</button>
+      <button class="topbtn" id="helperModeBtn" title="Line helper follow vs locked position">line: follow</button>
+      <div class="similarWrap">
+        <button class="topbtn" id="helperMenuBtn" type="button" title="Helper display">helper: bottom</button>
+        <div class="similarMenu" id="helperMenu">
+          <button type="button" class="similarOpt" data-helper-scope="full">Full helper (line + bottom bar)</button>
+          <button type="button" class="similarOpt" data-helper-scope="bottom">Bottom bar only</button>
+          <button type="button" class="similarOpt" data-helper-scope="off">Off (both hidden)</button>
+        </div>
+      </div>
       <button class="topbtn" id="questionBtn">question</button>
       <button class="topbtn" id="terminalBtn">terminal</button>
       <div class="similarWrap">
@@ -352,7 +360,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
           <div id="currentLine"></div>
           <pre id="editorHl"></pre>
           <textarea id="editor" spellcheck="false"></textarea>
-          <div id="fbFloat" class="show info">
+          <div id="fbFloat" class="info" style="display:none">
             <div id="fbFloatHead">
               <span>line helper</span>
               <span id="fbModeTag">follow</span>
@@ -361,7 +369,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
           </div>
         </div>
       </div>
-      <div class="feedback"><span class="dot" id="dot"></span><span id="fbmsg">pick a problem and start typing</span></div>
+      <div class="feedback" id="feedbackStrip"><span class="dot" id="dot"></span><span id="fbmsg">pick a problem and start typing</span></div>
       <div class="chips" id="chips"></div>
     </div>
     <div class="handle" id="handle"><button class="cbtn" id="collapse">›</button></div>
@@ -446,7 +454,8 @@ const state={
   stepsCache:{}, supportCache:{}, questionDigestCache:{}, chatByProblem:{},
   baseFont:23,
   similarDifficulty:'same difficulty',
-  helperEnabled:true,
+  helperScope:'bottom',
+  lastFeedbackStatus:'info',
   helperFollow:true,
   helperResizeObserver:null,
   pyodide:null,
@@ -459,10 +468,10 @@ const el={
   newOverlay:document.getElementById('newOverlay'), newModal:document.getElementById('newModal'), newHwInput:document.getElementById('newHwInput'),
   newSimilarMode:document.getElementById('newSimilarMode'), newExamPdf:document.getElementById('newExamPdf'), newPickPdfBtn:document.getElementById('newPickPdfBtn'), newPdfName:document.getElementById('newPdfName'), newAnalyzeBtn:document.getElementById('newAnalyzeBtn'),
   loading:document.getElementById('loading'), loadingText:document.getElementById('loadingText'), analyzeBtn:document.getElementById('analyzeBtn'),
-  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperToggleBtn:document.getElementById('helperToggleBtn'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), doctestMenuBtn:document.getElementById('doctestMenuBtn'), doctestMenu:document.getElementById('doctestMenu'), doctestRunOpt:document.getElementById('doctestRunOpt'), doctestViewOpt:document.getElementById('doctestViewOpt'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
+  goHome:document.getElementById('goHome'), helperModeBtn:document.getElementById('helperModeBtn'), helperMenuBtn:document.getElementById('helperMenuBtn'), helperMenu:document.getElementById('helperMenu'), questionBtn:document.getElementById('questionBtn'), terminalBtn:document.getElementById('terminalBtn'), doctestMenuBtn:document.getElementById('doctestMenuBtn'), doctestMenu:document.getElementById('doctestMenu'), doctestRunOpt:document.getElementById('doctestRunOpt'), doctestViewOpt:document.getElementById('doctestViewOpt'), similarBtn:document.getElementById('similarBtn'), similarMenu:document.getElementById('similarMenu'), newBtn:document.getElementById('newBtn'), sessionName:document.getElementById('sessionName'),
   ptabs:document.getElementById('ptabs'), editor:document.getElementById('editor'), editorHl:document.getElementById('editorHl'), gutter:document.getElementById('gutter'), gutterInner:document.getElementById('gutterInner'), currentLine:document.getElementById('currentLine'), editorPane:document.getElementById('editorPane'), fbFloat:document.getElementById('fbFloat'),
   fbFloatHead:document.getElementById('fbFloatHead'), fbFloatBody:document.getElementById('fbFloatBody'), fbModeTag:document.getElementById('fbModeTag'),
-  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), copyBtn:document.getElementById('copyBtn'),
+  dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), feedbackStrip:document.getElementById('feedbackStrip'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), copyBtn:document.getElementById('copyBtn'),
   questionWin:document.getElementById('questionWin'), questionWinHead:document.getElementById('questionWinHead'), questionWinBody:document.getElementById('questionWinBody'), questionWinClose:document.getElementById('questionWinClose'),
   terminalWin:document.getElementById('terminalWin'), terminalWinHead:document.getElementById('terminalWinHead'), terminalWinClose:document.getElementById('terminalWinClose'), terminalOutput:document.getElementById('terminalOutput'),
   doctestTermWin:document.getElementById('doctestTermWin'), doctestTermWinHead:document.getElementById('doctestTermWinHead'), doctestTermWinClose:document.getElementById('doctestTermWinClose'), doctestTermOutput:document.getElementById('doctestTermOutput'), doctestTermRunBtn:document.getElementById('doctestTermRunBtn'), clearDoctestTermBtn:document.getElementById('clearDoctestTermBtn'),
@@ -642,11 +651,31 @@ function renderQuestionPrompt(){
   updateWindowScaledText(el.questionWin);
 }
 
-function toggleHelperEnabled(){
-  state.helperEnabled=!state.helperEnabled;
-  el.helperToggleBtn.textContent=state.helperEnabled?'helper: on':'helper: off';
-  el.fbFloat.style.display=state.helperEnabled?'block':'none';
-  el.fbmsg.textContent=state.helperEnabled?el.fbmsg.textContent:'helper disabled';
+function setHelperScope(scope){
+  if(scope!=='full'&&scope!=='bottom'&&scope!=='off') return;
+  state.helperScope=scope;
+  clearTimeout(state.feedbackTimer);
+  el.helperMenu.classList.remove('show');
+  applyHelperScope();
+}
+
+function applyHelperScope(){
+  const full=state.helperScope==='full';
+  const showBottom=state.helperScope==='bottom'||state.helperScope==='full';
+  el.fbFloat.style.display=full?'block':'none';
+  if(!full){
+    el.fbFloat.classList.remove('show','ok','warn','info','err');
+  }
+  el.feedbackStrip.style.display=showBottom?'flex':'none';
+  el.helperModeBtn.style.display=full?'inline-block':'none';
+  const cap={full:'helper: full',bottom:'helper: bottom',off:'helper: off'};
+  el.helperMenuBtn.textContent=cap[state.helperScope]||'helper';
+  if(full){
+    el.fbFloat.classList.add(state.lastFeedbackStatus||'info','show');
+    el.fbFloatBody.textContent=el.fbmsg.textContent||'';
+    autoExpandHelperForContent();
+    updateFloatingFeedbackPosition();
+  }
 }
 
 function toggleWindow(win, force){
@@ -823,12 +852,15 @@ RUN_OUTPUT=_buf.getvalue()+_err.getvalue()`);
 }
 
 function setFeedback(status,msg){
+  const st=status||'info';
+  state.lastFeedbackStatus=st;
+  if(state.helperScope==='off') return;
   const colors={ok:'var(--green)',warn:'var(--amber)',info:'var(--cyan)',err:'var(--red)'};
-  el.dot.style.background=colors[status]||'var(--text3)';
+  el.dot.style.background=colors[st]||'var(--text3)';
   el.fbmsg.textContent=msg;
-  if(!state.helperEnabled) return;
+  if(state.helperScope!=='full') return;
   el.fbFloat.className='';
-  el.fbFloat.classList.add(status||'info','show');
+  el.fbFloat.classList.add(st,'show');
   el.fbFloatBody.textContent=msg;
   autoExpandHelperForContent();
   updateFloatingFeedbackPosition();
@@ -893,6 +925,7 @@ function applyResponsiveFont(){
 }
 
 function updateHelperFontFromWidgetSize(){
+  if(state.helperScope!=='full') return;
   const helperRect = el.fbFloat.getBoundingClientRect();
   const w = helperRect.width || 260;
   const helperBody = Math.max(13, Math.min(17, w * 0.052));
@@ -903,6 +936,7 @@ function updateHelperFontFromWidgetSize(){
 }
 
 function autoExpandHelperForContent(){
+  if(state.helperScope!=='full') return;
   const paneW = el.editorPane.clientWidth || 900;
   const currentW = el.fbFloat.offsetWidth || 260;
 
@@ -1058,6 +1092,7 @@ function getCaretXY(){
 }
 
 function updateFloatingFeedbackPosition(){
+  if(state.helperScope!=='full') return;
   if(!el.fbFloatBody.textContent) return;
   if(!state.helperFollow){
     clampFloatingHelper();
@@ -1098,7 +1133,7 @@ function clampFloatingHelper(){
 
 function setHelperMode(follow){
   state.helperFollow=follow;
-  el.helperModeBtn.textContent=follow?'helper: follow':'helper: lock';
+  el.helperModeBtn.textContent=follow?'line: follow':'line: lock';
   el.fbModeTag.textContent=follow?'follow':'locked';
   updateFloatingFeedbackPosition();
 }
@@ -1138,6 +1173,7 @@ function applyCompletedSteps(indices){
 }
 
 async function runLiveFeedback(){
+  if(state.helperScope==='off') return;
   const p=state.problems[state.idx];
   if(!p) return;
   const code=el.editor.value;
@@ -1959,7 +1995,9 @@ function onEditorInput(){
   renderHighlight();
   scheduleEditHistoryPush();
   clearTimeout(state.feedbackTimer);
-  state.feedbackTimer=setTimeout(runLiveFeedback,3000);
+  if(state.helperScope!=='off'){
+    state.feedbackTimer=setTimeout(runLiveFeedback,3000);
+  }
 }
 
 function initSidebarTabs(){
@@ -2013,18 +2051,30 @@ function bindEvents(){
 
   el.goHome.onclick=goHome;
   el.helperModeBtn.onclick=()=>setHelperMode(!state.helperFollow);
-  el.helperToggleBtn.onclick=toggleHelperEnabled;
+  el.helperMenuBtn.onclick=(e)=>{
+    e.stopPropagation();
+    el.helperMenu.classList.toggle('show');
+    el.similarMenu.classList.remove('show');
+    el.doctestMenu.classList.remove('show');
+  };
+  el.helperMenu.querySelectorAll('[data-helper-scope]').forEach(opt=>{
+    opt.addEventListener('click',()=>{
+      setHelperScope(opt.getAttribute('data-helper-scope'));
+    });
+  });
   el.questionBtn.onclick=()=>{ renderQuestionPrompt(); toggleWindow(el.questionWin); };
   el.terminalBtn.onclick=()=>toggleWindow(el.terminalWin);
   el.similarBtn.onclick=(e)=>{
     e.stopPropagation();
     el.similarMenu.classList.toggle('show');
     el.doctestMenu.classList.remove('show');
+    el.helperMenu.classList.remove('show');
   };
   el.doctestMenuBtn.onclick=(e)=>{
     e.stopPropagation();
     el.doctestMenu.classList.toggle('show');
     el.similarMenu.classList.remove('show');
+    el.helperMenu.classList.remove('show');
   };
   el.doctestRunOpt.onclick=()=>{
     el.doctestMenu.classList.remove('show');
@@ -2048,6 +2098,9 @@ function bindEvents(){
     }
     if(!el.doctestMenu.contains(e.target) && e.target!==el.doctestMenuBtn){
       el.doctestMenu.classList.remove('show');
+    }
+    if(!el.helperMenu.contains(e.target) && e.target!==el.helperMenuBtn){
+      el.helperMenu.classList.remove('show');
     }
   });
   el.newBtn.onclick=()=>toggleNewOverlay(true);
@@ -2128,8 +2181,10 @@ function bindEvents(){
   window.addEventListener('resize',()=>{
     applyResponsiveFont();
     syncGutterToEditorScroll();
-    if(state.helperEnabled) autoExpandHelperForContent();
-    updateFloatingFeedbackPosition();
+    if(state.helperScope==='full'){
+      autoExpandHelperForContent();
+      updateFloatingFeedbackPosition();
+    }
   });
 
   el.collapse.onclick=()=>{
@@ -2138,6 +2193,7 @@ function bindEvents(){
     el.collapse.textContent=state.collapsed?'‹':'›';
   };
 
+  applyHelperScope();
   setHelperMode(true);
   setFeedback('info',el.fbmsg.textContent||'pick a problem and start typing');
   renderQuestionPrompt();
