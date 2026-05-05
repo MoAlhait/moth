@@ -202,6 +202,15 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
 .refDoc .refSection > h3 + *{margin-top:0}
 .refSheet>p,.refSheet>ul{margin-bottom:18px}
 .refSheet>ul>li{margin-bottom:10px}
+.refDoc.apiRefSheet{padding-bottom:8px}
+.refDoc.apiRefSheet .refSheetLead{font-size:12px;color:var(--text2);margin:0 0 16px;line-height:1.65}
+.refDoc.apiRefSheet .apiRefH3{font:600 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);margin:20px 0 8px}
+.refDoc.apiRefSheet .apiRefH3:first-child{margin-top:0}
+.refDoc.apiRefSheet table.apiRefTable{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 4px}
+.refDoc.apiRefSheet table.apiRefTable th,.refDoc.apiRefSheet table.apiRefTable td{border:1px solid var(--border2);padding:6px 8px;text-align:left;vertical-align:top}
+.refDoc.apiRefSheet table.apiRefTable th{background:var(--bg3);color:var(--text3);font:500 9px var(--mono);letter-spacing:.05em;text-transform:uppercase;width:38%}
+.refDoc.apiRefSheet table.apiRefTable td:first-child{font-family:var(--mono);color:#E5C07B;white-space:normal;word-break:break-word}
+.refDoc.apiRefSheet table.apiRefTable td:last-child{color:var(--text2);line-height:1.55}
 #chatPanel.rpanel.on{display:flex!important;flex-direction:column;overflow:hidden;padding-bottom:10px}
 .chatIntro{margin:0 0 12px;font-size:12px;line-height:1.6;color:var(--text2);flex-shrink:0}
 #chatLog{flex:1;min-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:6px 2px 14px;margin:0 -2px}
@@ -359,6 +368,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
     <div class="rcol" id="rcol">
       <div class="rtabs" id="rtabs"></div>
       <div class="rpanel" id="stepsPanel"></div>
+      <div class="rpanel" id="refSheetPanel"></div>
       <div class="rpanel" id="syntaxPanel"></div>
       <div class="rpanel" id="checkpointsPanel"></div>
       <div class="rpanel" id="hintsPanel"></div>
@@ -427,7 +437,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
 <script>
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
-const PANEL_CACHE_VER=13;
+const PANEL_CACHE_VER=14;
 
 const state={
   problems:[], idx:0, collapsed:false, sw:268,
@@ -460,7 +470,7 @@ const el={
   runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
   fontSlider:document.getElementById('fontSlider'), layout:document.getElementById('layout'), handle:document.getElementById('handle'), collapse:document.getElementById('collapse'),
   rtabs:document.getElementById('rtabs'), stepsPanel:document.getElementById('stepsPanel'), syntaxPanel:document.getElementById('syntaxPanel'),
-  checkpointsPanel:document.getElementById('checkpointsPanel'), hintsPanel:document.getElementById('hintsPanel'), gotchasPanel:document.getElementById('gotchasPanel'), refPanel:document.getElementById('refPanel'),
+  checkpointsPanel:document.getElementById('checkpointsPanel'), hintsPanel:document.getElementById('hintsPanel'), gotchasPanel:document.getElementById('gotchasPanel'), refSheetPanel:document.getElementById('refSheetPanel'), refPanel:document.getElementById('refPanel'),
   chatPanel:document.getElementById('chatPanel'), chatLog:document.getElementById('chatLog'), chatInput:document.getElementById('chatInput'), chatSend:document.getElementById('chatSend')
 };
 
@@ -1223,6 +1233,78 @@ function buildSyntaxFallbackSheet(p){
   `</div>`;
 }
 
+function buildRefSheetFallback(p){
+  const row=(api,does)=>`<tr><td><code>${escapeHtml(api)}</code></td><td>${escapeHtml(does)}</td></tr>`;
+  const tbl=(title,rows)=>`<h3 class="apiRefH3">${escapeHtml(title)}</h3><table class="apiRefTable"><thead><tr><th>API</th><th>What it does</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const topic=((p&&p.topic)||'').toLowerCase();
+  const st=(p&&p.starter)||'';
+  const treeish=/\b(tree|graph|node|linked|list|recurs|heap|priority|bst)\b/.test(topic)||/\b(class Node|children|\.next)\b/.test(st);
+  const sqlish=/\b(sql|database|query|join|select|aggregate)\b/.test(topic)||/\b(FROM|WHERE|SELECT|JOIN)\b/i.test(st);
+  const numish=/\b(sort|heap|bisect|binary|median|math)\b/.test(topic)||/\b(heapq|bisect|math\.)\b/.test(st);
+  const core=
+    tbl('Built-ins and iteration',[
+      row('len(x)','Number of items in a sequence or mapping.'),
+      row('range(stop) / range(a,b[,step])','Arithmetic progression of indices; often paired with len for 0..n-1.'),
+      row('enumerate(iter[, start])','Yield (index, value) pairs while looping.'),
+      row('zip(*iterables)','Iterate tuples aligned by position; stops at shortest.'),
+      row('sorted(iterable[, key=..., reverse=...])','New sorted list; key is a one-arg function (e.g. lambda t: t[1]).'),
+      row('reversed(seq)','Iterator over sequence from last to first.'),
+      row('sum / min / max','Aggregate numeric iterables; min/max accept key= like sorted.'),
+      row('any(pred) / all(pred)','True if any/all bools in iterable.'),
+    ].join(''))+
+    tbl('Lists, dicts, sets',[
+      row('list.append(x)','Add one element to the end (in place).'),
+      row('list.pop([i])','Remove and return last item or item at index i.'),
+      row('dict.get(k[, default])','Safe lookup; returns default if k missing (no KeyError).'),
+      row('dict.items() / .keys() / .values()','Views for pairs or components (iterate for membership).'),
+      row('set.add(x) / set.remove(x)','Add member; remove raises KeyError-style if missing.'),
+    ].join(''))+
+    tbl('Strings',[
+      row('str.split([sep[, maxsplit]])','Split on delimiter; default splits on whitespace.'),
+      row('str.join(iterable)','Glue strings from iterable with self between (often "".join).'),
+      row('str.strip() / lstrip / rstrip','Remove leading/trailing whitespace (or chars in arg).'),
+      row('str.replace(a,b[,count])','Replace occurrences of substring a with b.'),
+    ].join(''));
+  let extra='';
+  if(treeish){
+    extra+=tbl('collections (structures)',[
+      row('collections.deque([iter])','Double-ended queue; O(1) append/popleft for FIFO stacks.'),
+      row('deque.appendleft(x)','Push on front; pair with popleft for queue behavior.'),
+      row('collections.defaultdict(factory)','Like dict but missing keys call factory() to create default.'),
+      row('collections.Counter(iterable)','Multiset counts; useful for frequencies.'),
+    ].join(''))+
+    tbl('heapq (priority)',[
+      row('heapq.heappush(h, item)','Push onto min-heap list h.'),
+      row('heapq.heappop(h)','Pop smallest item; heap must stay heapified.'),
+      row('heapq.heapify(h)','Turn list h into a heap in O(n).'),
+    ].join(''));
+  }
+  if(numish){
+    extra+=tbl('bisect and math',[
+      row('bisect.bisect_left(a, x)','Index where to insert x to keep sorted order.'),
+      row('bisect.insort(a, x)','Insert x into sorted list a in place.'),
+      row('math.inf / -math.inf','Sentinel larger/smaller than real numbers in comparisons.'),
+      row('math.gcd(a,b)','Greatest common divisor (two ints).'),
+    ].join(''));
+  }
+  if(sqlish){
+    extra+=tbl('SQL-shaped reminders (generic)',[
+      row('SELECT … FROM …','Choose columns from a relation; qualify columns when joining.'),
+      row('WHERE vs HAVING','WHERE filters rows before GROUP BY; HAVING filters grouped rows after.'),
+      row('JOIN … ON …','Combine tables on a predicate; keep join keys in ON.'),
+    ].join(''));
+  }
+  if(!extra){
+    extra=tbl('itertools (handy)',[
+      row('itertools.pairwise(iter)','Successive overlapping pairs (Python 3.10+).'),
+      row('itertools.groupby(iter, key=…)','Runs of equal key values; sort by key first if you need global groups.'),
+      row('itertools.chain(*iters)','Flatten one level of iterables into one iterator.'),
+    ].join(''));
+  }
+  const title=escapeHtml(p.title||'This problem');
+  return `<div class="refDoc apiRefSheet"><p class="refSheetLead">Problem-scoped <strong>Python 3</strong> cheat sheet (stdlib only)—like a course final reference page. Skim APIs that match <strong>${title}</strong>; this is not a solution key.</p>${core}${extra}</div>`;
+}
+
 function renderSupportFallback(i){
   const p=state.problems[i];
   const steps=(p.steps||[]).map(s=>`<li>${escapeHtml(s)}</li>`).join('');
@@ -1232,6 +1314,7 @@ function renderSupportFallback(i){
     syntax:buildSyntaxFallbackSheet(p),
     checkpoints:`<div class="refDoc cpGuide">${cpFallback}</div>`,
     gotchas:`<div class="cardx warn"><h4>Off-by-one</h4><p>Compare indices and ranges carefully. Use <strong>&lt;</strong> vs <strong>&lt;=</strong> consistently with how you index.</p></div><div class="cardx warn"><h4>State reset</h4><p>Reset accumulators and iterators in the right place so <strong>each call</strong> starts from a known state.</p></div><div class="cardx warn"><h4>Return timing</h4><p>Save values you still need <strong>before</strong> you mutate variables that held them.</p></div><div class="cardx tip"><h4>Checkpoints</h4><p>Map each chip to one small slice of code so progress stays visible.</p></div><div class="cardx tip"><h4>Small tests</h4><p>After each edit, trace <strong>one tiny example</strong> by hand.</p></div><div class="cardx tip"><h4>Incremental build</h4><p>Get one path working first, then generalize.</p></div>`,
+    refSheet:buildRefSheetFallback(p),
     ref:`<div class="refSheet"><h3>Current problem</h3><p><code>${escapeHtml(p.title||'Problem')}</code></p><h3>Checkpoint plan</h3><ul>${steps || '<li>Implement core logic</li>'}</ul><h3>Mental model</h3><p>Each checkpoint is a <strong>small verifiable unit</strong>. Finish one before leaning on the next.</p></div>`
   };
   state.supportCache[i]={ver:PANEL_CACHE_VER,...fallback};
@@ -1239,6 +1322,7 @@ function renderSupportFallback(i){
   el.syntaxPanel.innerHTML=fallback.syntax;
   el.checkpointsPanel.innerHTML=fallback.checkpoints;
   el.gotchasPanel.innerHTML=fallback.gotchas;
+  el.refSheetPanel.innerHTML=fallback.refSheet;
   el.refPanel.innerHTML=fallback.ref;
 }
 
@@ -1250,6 +1334,7 @@ async function generateSupportPanels(i){
     el.syntaxPanel.innerHTML=hit.syntax;
     el.checkpointsPanel.innerHTML=hit.checkpoints;
     el.gotchasPanel.innerHTML=hit.gotchas;
+    el.refSheetPanel.innerHTML=hit.refSheet;
     el.refPanel.innerHTML=hit.ref;
     return;
   }
@@ -1258,6 +1343,7 @@ async function generateSupportPanels(i){
   el.syntaxPanel.innerHTML='<div class="cardx"><p>Generating problem-scoped syntax (Haiku)…</p></div>';
   el.checkpointsPanel.innerHTML='<div class="cardx"><p>Generating checkpoint guide…</p></div>';
   el.gotchasPanel.innerHTML='<div class="cardx"><p>Generating gotchas...</p></div>';
+  el.refSheetPanel.innerHTML='<div class="cardx"><p>Generating problem reference sheet…</p></div>';
   el.refPanel.innerHTML='<div class="cardx"><p>Generating AI reference...</p></div>';
 
   try{
@@ -1305,8 +1391,28 @@ Create exactly one <section class="refSection"> per checkpoint label listed in t
   Optional <ul class="refBullets"><li>quick self-check</li></ul>
 
 Style matches earlier “sectioned” sidebar guides (refSection / refLead / refCode). No markdown. Allowed tags: div, section, h3, p, strong, em, code, pre, ul, li, br.`;
-    const [hintsRaw, syntaxRaw, cpRaw, gotchasRaw, refRaw] = await Promise.all([
+    const refSheetSys=`You produce a **course-style Python 3 reference sheet** for one homework problem—like a final-exam permitted-notes page: dense tables of **stdlib** APIs (no third-party), each row a short signature or name plus one plain sentence on what it does and when students reach for it.
+
+Tailor sections to this problem’s topic, starter shape, and doctests (infer likely needs: trees→deque/heapq; graphs→dicts+sets; strings→split/join/strip; SQL context→no Python beyond maybe text processing unless starter is Python). Omit huge unrelated areas.
+
+**Do not** solve their assignment, name their starter functions as “call this next,” or paste their doctest as an answer. You may mention their **title** once in the opening lead only.
+
+Output HTML only, wrapped once in:
+<div class="refDoc apiRefSheet"> ... </div>
+
+Inside:
+- <p class="refSheetLead">2–3 sentences: what kind of task this is and how to use the sheet.</p>
+- Then **5–9** sections: each <h3 class="apiRefH3">SECTION TITLE</h3> followed by <table class="apiRefTable"><thead><tr><th>API</th><th>What it does</th></tr></thead><tbody> … rows … </tbody></table>
+- Each row: <tr><td><code>name or short call pattern</code></td><td>One sentence, <strong>key term</strong> optional.</td></tr>
+- Prefer **stdlib**: builtins, list/str/dict/set, collections, itertools, heapq, bisect, functools, operator, copy, math, re (only if clearly useful).`;
+
+    const refSheetUser=`${fullCtx}
+
+Return the reference sheet HTML as specified. No markdown fences.`;
+
+    const [hintsRaw, refSheetRaw, syntaxRaw, cpRaw, gotchasRaw, refRaw] = await Promise.all([
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 4 hint cards as HTML only. Each: <div class="cardx"><h4>TITLE</h4><p>BODY</p></div>. Strategy only: use <strong> for critical terms. Use </p><p> between separate ideas for air. Do not paste SQL that references their tables/columns; do not give a full solution.`}], 'You are a CS tutor.', 500),
+      callAnthropic([{role:'user',content:refSheetUser}], refSheetSys, 3200, MODEL),
       callAnthropic([{role:'user',content:syntaxUser}], syntaxSys, 3800, MODEL),
       callAnthropic([{role:'user',content:cpGuideUser}], cpGuideSys, 1400, MODEL),
       callAnthropic([{role:'user',content:`${fullCtx}\n\nCreate exactly 6 gotcha/tip cards as HTML only. Use <div class="cardx warn"> or <div class="cardx tip">, each with <h4> then <p>. Put the main idea in <strong> in the first sentence. Use </p><p> between ideas for vertical space. Avoid pasting their exact SQL or naming their specific tables; speak in general patterns (joins, HAVING vs WHERE, grouping) unless naming is unavoidable.`}], 'You are a CS tutor.', 650),
@@ -1315,6 +1421,7 @@ Style matches earlier “sectioned” sidebar guides (refSection / refLead / ref
     const cached={
       ver:PANEL_CACHE_VER,
       hints:sanitizePanelHtml(hintsRaw).trim(),
+      refSheet:sanitizePanelHtml(refSheetRaw).trim(),
       syntax:sanitizePanelHtml(syntaxRaw).trim(),
       checkpoints:sanitizePanelHtml(cpRaw).trim(),
       gotchas:sanitizePanelHtml(gotchasRaw).trim(),
@@ -1322,6 +1429,7 @@ Style matches earlier “sectioned” sidebar guides (refSection / refLead / ref
     };
     state.supportCache[i]=cached;
     el.hintsPanel.innerHTML=cached.hints;
+    el.refSheetPanel.innerHTML=cached.refSheet;
     el.syntaxPanel.innerHTML=cached.syntax;
     el.checkpointsPanel.innerHTML=cached.checkpoints;
     el.gotchasPanel.innerHTML=cached.gotchas;
@@ -1855,7 +1963,7 @@ function onEditorInput(){
 }
 
 function initSidebarTabs(){
-  const tabs=[['steps','stepsPanel'],['syntax','syntaxPanel'],['checkpoints','checkpointsPanel'],['hints','hintsPanel'],['gotchas','gotchasPanel'],['ai ref','refPanel'],['chat','chatPanel']];
+  const tabs=[['steps','stepsPanel'],['ref sheet','refSheetPanel'],['syntax','syntaxPanel'],['checkpoints','checkpointsPanel'],['hints','hintsPanel'],['gotchas','gotchasPanel'],['ai ref','refPanel'],['chat','chatPanel']];
   el.rtabs.innerHTML='';
   tabs.forEach(([label,panel],i)=>{
     const t=document.createElement('button');
