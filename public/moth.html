@@ -95,8 +95,10 @@ code,pre{font-family:var(--mono)}
   position:absolute;
   z-index:12;
   pointer-events:auto;
-  max-width:none;
+  box-sizing:border-box;
   min-width:220px;
+  max-width:calc(100% - 16px);
+  width:min(100%,420px);
   padding:0;
   border-radius:10px;
   border:1px solid var(--border2);
@@ -105,15 +107,15 @@ code,pre{font-family:var(--mono)}
   font-size:15px;
   line-height:1.5;
   color:var(--text);
-  white-space:normal;
-  word-break:break-word;
   opacity:1;
   transform:translateY(4px);
   transition:opacity .12s ease, transform .12s ease;
-  resize:both;
-  overflow:visible;
-  min-height:90px;
-  max-height:none;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  min-height:72px;
+  max-height:min(52vh,480px);
+  resize:vertical;
 }
 #fbFloat.show{opacity:1;transform:translateY(0)}
 #fbFloat.ok{border-color:rgba(152,195,121,.55)}
@@ -121,12 +123,27 @@ code,pre{font-family:var(--mono)}
 #fbFloat.info{border-color:rgba(97,175,239,.55)}
 #fbFloat.err{border-color:rgba(224,108,117,.55)}
 #fbFloatHead{
+  flex-shrink:0;
   display:flex;align-items:center;justify-content:space-between;
   padding:6px 10px;border-bottom:1px solid var(--border);
   background:rgba(44,49,60,.92);font:11px var(--mono);color:var(--text2);cursor:move;
   pointer-events:auto;
 }
-#fbFloatBody{padding:10px 12px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow:visible;max-height:none;pointer-events:none}
+#fbFloatBody{
+  box-sizing:border-box;
+  flex:1 1 auto;
+  min-height:0;
+  padding:10px 12px;
+  font-size:15px;
+  line-height:1.55;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  overflow-x:hidden;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  pointer-events:auto;
+}
 
 /* Pastel syntax colors */
 .t-com{color:#5c6370}
@@ -673,8 +690,7 @@ function applyHelperScope(){
   if(full){
     el.fbFloat.classList.add(state.lastFeedbackStatus||'info','show');
     el.fbFloatBody.textContent=el.fbmsg.textContent||'';
-    autoExpandHelperForContent();
-    updateFloatingFeedbackPosition();
+    refreshLineHelperLayout();
   }
 }
 
@@ -862,8 +878,7 @@ function setFeedback(status,msg){
   el.fbFloat.className='';
   el.fbFloat.classList.add(st,'show');
   el.fbFloatBody.textContent=msg;
-  autoExpandHelperForContent();
-  updateFloatingFeedbackPosition();
+  refreshLineHelperLayout();
 }
 
 function updateGutterIfLineCountChanged(text){
@@ -919,37 +934,40 @@ function applyResponsiveFont(){
   const lh = (scaled * 1.75) + 'px';
   [el.editor,el.editorHl,el.gutter].forEach(n=>{n.style.fontSize=fs;n.style.lineHeight=lh;});
   el.currentLine.style.height=lh;
-  updateHelperFontFromWidgetSize();
+  refreshLineHelperLayout();
 
   updateCurrentLine();
 }
 
 function updateHelperFontFromWidgetSize(){
   if(state.helperScope!=='full') return;
-  const helperRect = el.fbFloat.getBoundingClientRect();
-  const w = helperRect.width || 260;
-  const helperBody = Math.max(13, Math.min(17, w * 0.052));
-  const helperHead = Math.max(10, helperBody * 0.76);
-  el.fbFloatBody.style.fontSize = helperBody + 'px';
-  el.fbFloatBody.style.lineHeight = (helperBody * 1.45) + 'px';
-  el.fbFloatHead.style.fontSize = helperHead + 'px';
+  const w = el.fbFloat.clientWidth || 280;
+  const editorFs = parseFloat(getComputedStyle(el.editor).fontSize) || 14;
+  const bodyPx = Math.max(12, Math.min(26, editorFs * 0.95 + Math.min(5, w * 0.006)));
+  const headPx = Math.max(10, Math.min(20, bodyPx * 0.78));
+  el.fbFloatBody.style.fontSize = bodyPx + 'px';
+  el.fbFloatBody.style.lineHeight = (bodyPx * 1.52) + 'px';
+  el.fbFloatHead.style.fontSize = headPx + 'px';
+}
+
+function refreshLineHelperLayout(){
+  if(state.helperScope!=='full') return;
+  autoExpandHelperForContent();
+  updateHelperFontFromWidgetSize();
+  updateFloatingFeedbackPosition();
 }
 
 function autoExpandHelperForContent(){
   if(state.helperScope!=='full') return;
   const paneW = el.editorPane.clientWidth || 900;
-  const currentW = el.fbFloat.offsetWidth || 260;
-
-  const preferredW = Math.max(currentW, Math.floor(paneW * 0.42));
-  const width = Math.min(Math.max(260, paneW - 24), preferredW);
+  const paneH = el.editorPane.clientHeight || 400;
+  const width = Math.min(Math.max(260, Math.floor(paneW * 0.46)), paneW - 20);
   el.fbFloat.style.width = width + 'px';
-
+  el.fbFloat.style.maxWidth = Math.max(220, paneW - 16) + 'px';
+  const capH = Math.min(Math.floor(paneH * 0.58), Math.floor(window.innerHeight * 0.52), 520);
+  el.fbFloat.style.maxHeight = Math.max(160, capH) + 'px';
   el.fbFloat.style.height = 'auto';
-  el.fbFloat.style.minHeight = '90px';
-  const needed = el.fbFloat.scrollHeight;
-  el.fbFloat.style.height = needed + 'px';
-
-  updateHelperFontFromWidgetSize();
+  el.fbFloat.style.minHeight = '72px';
 }
 
 function setEditorFont(px){
@@ -2181,10 +2199,7 @@ function bindEvents(){
   window.addEventListener('resize',()=>{
     applyResponsiveFont();
     syncGutterToEditorScroll();
-    if(state.helperScope==='full'){
-      autoExpandHelperForContent();
-      updateFloatingFeedbackPosition();
-    }
+    if(state.helperScope==='full') refreshLineHelperLayout();
   });
 
   el.collapse.onclick=()=>{
@@ -2208,10 +2223,17 @@ function bindEvents(){
 
   if(typeof ResizeObserver !== 'undefined'){
     state.helperResizeObserver = new ResizeObserver(()=>{
-      updateHelperFontFromWidgetSize();
-      updateFloatingFeedbackPosition();
+      if(state.helperScope!=='full') return;
+      refreshLineHelperLayout();
     });
     state.helperResizeObserver.observe(el.fbFloat);
+    if(el.editorPane){
+      const paneObs=new ResizeObserver(()=>{
+        if(state.helperScope!=='full') return;
+        refreshLineHelperLayout();
+      });
+      paneObs.observe(el.editorPane);
+    }
     const popObserver = new ResizeObserver(()=>{
       updateWindowScaledText(el.questionWin);
       updateWindowScaledText(el.terminalWin);
