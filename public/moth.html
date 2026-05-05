@@ -722,10 +722,12 @@ try:
         print()
         print("--- doctests ---")
         print()
-        class _DT:
-            pass
-        _DT.__doc__ = _dt
-        doctest.run_docstring_examples(_DT, _g, verbose=True, name="problem_doctests")
+        # run_docstring_examples() calls inspect.getsourcefile() — fails in Pyodide for
+        # synthetic objects. Parse the doctest string and run with DocTestRunner instead.
+        parser = doctest.DocTestParser()
+        test = parser.get_doctest(_dt, _g, "problem_doctests", "<doctests>", 0)
+        runner = doctest.DocTestRunner(verbose=True)
+        runner.run(test)
     else:
         print()
         print("(no doctests for this problem)")
