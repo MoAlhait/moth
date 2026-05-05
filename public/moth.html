@@ -263,9 +263,10 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
 .popWin.show{display:flex}
 .popBody{padding:10px; overflow:auto; flex:1; min-height:0}
 #terminalWin .popBody{display:flex;flex-direction:column;gap:8px;overflow:hidden}
+#doctestTermWin .popBody{display:flex;flex-direction:column;gap:8px;overflow:hidden}
 #doctestWin .popBody{display:flex;flex-direction:column;gap:8px;overflow:hidden;padding:10px}
 #doctestViewBody{margin:0;flex:1;min-height:0;overflow:auto;white-space:pre-wrap;font:12px/1.55 var(--mono);color:var(--text);background:#11151c;border:1px solid var(--border2);border-radius:8px;padding:10px 12px}
-#terminalOutput{background:#11151c;border:1px solid var(--border2);border-radius:8px;padding:10px;white-space:pre-wrap;min-height:0;overflow:auto;color:#ABB2BF;font:12px/1.5 var(--mono);flex:1}
+#terminalOutput,#doctestTermOutput{background:#11151c;border:1px solid var(--border2);border-radius:8px;padding:10px;white-space:pre-wrap;min-height:0;overflow:auto;color:#ABB2BF;font:12px/1.5 var(--mono);flex:1}
 .termRow{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
 .termBtn{height:28px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);padding:0 10px;border-radius:7px;font-size:12px;cursor:pointer}
 .questionText{white-space:pre-wrap;font:13px/1.6 var(--sans);color:var(--text);margin:0}
@@ -380,11 +381,20 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
   <div class="popWin" id="terminalWin" style="left:120px;top:120px;width:520px;height:320px;">
     <div class="popHead" id="terminalWinHead"><span>python terminal</span><button class="closeBtn" id="terminalWinClose">close</button></div>
     <div class="popBody">
-      <div id="terminalOutput">Use doctests ▸ Run doctests in the top bar to open this window and test. “Run code + doctests” here runs in the background unless the window is already open.</div>
+      <div id="terminalOutput">Runs your editor as plain Python (stdout/stderr here). Doctests use the separate “doctest output” window (doctests ▸ Run doctests).</div>
       <div class="termRow">
-        <button class="termBtn" id="runDoctestsTermBtn">Run doctests</button>
-        <button class="termBtn" id="runCodeBtn">run code + doctests</button>
+        <button class="termBtn" id="runCodeBtn">Run code</button>
         <button class="termBtn" id="clearTermBtn">clear</button>
+      </div>
+    </div>
+  </div>
+  <div class="popWin" id="doctestTermWin" style="left:140px;top:200px;width:520px;height:340px;">
+    <div class="popHead" id="doctestTermWinHead"><span>doctest output</span><button class="closeBtn" id="doctestTermWinClose">close</button></div>
+    <div class="popBody">
+      <div id="doctestTermOutput">Run doctests from the top bar (doctests ▸ Run doctests) or press Run here. This window only runs problem doctests against your editor code.</div>
+      <div class="termRow">
+        <button class="termBtn" id="doctestTermRunBtn">Run doctests</button>
+        <button class="termBtn" id="clearDoctestTermBtn">clear</button>
       </div>
     </div>
   </div>
@@ -417,7 +427,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
 <script>
 const API='/api/claude';
 const MODEL='claude-haiku-4-5-20251001';
-const PANEL_CACHE_VER=12;
+const PANEL_CACHE_VER=13;
 
 const state={
   problems:[], idx:0, collapsed:false, sw:268,
@@ -445,8 +455,9 @@ const el={
   dot:document.getElementById('dot'), fbmsg:document.getElementById('fbmsg'), chips:document.getElementById('chips'), questionInline:document.getElementById('questionInline'), copyBtn:document.getElementById('copyBtn'),
   questionWin:document.getElementById('questionWin'), questionWinHead:document.getElementById('questionWinHead'), questionWinBody:document.getElementById('questionWinBody'), questionWinClose:document.getElementById('questionWinClose'),
   terminalWin:document.getElementById('terminalWin'), terminalWinHead:document.getElementById('terminalWinHead'), terminalWinClose:document.getElementById('terminalWinClose'), terminalOutput:document.getElementById('terminalOutput'),
+  doctestTermWin:document.getElementById('doctestTermWin'), doctestTermWinHead:document.getElementById('doctestTermWinHead'), doctestTermWinClose:document.getElementById('doctestTermWinClose'), doctestTermOutput:document.getElementById('doctestTermOutput'), doctestTermRunBtn:document.getElementById('doctestTermRunBtn'), clearDoctestTermBtn:document.getElementById('clearDoctestTermBtn'),
   doctestWin:document.getElementById('doctestWin'), doctestWinHead:document.getElementById('doctestWinHead'), doctestWinClose:document.getElementById('doctestWinClose'), doctestViewBody:document.getElementById('doctestViewBody'),
-  runDoctestsTermBtn:document.getElementById('runDoctestsTermBtn'), runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
+  runCodeBtn:document.getElementById('runCodeBtn'), clearTermBtn:document.getElementById('clearTermBtn'),
   fontSlider:document.getElementById('fontSlider'), layout:document.getElementById('layout'), handle:document.getElementById('handle'), collapse:document.getElementById('collapse'),
   rtabs:document.getElementById('rtabs'), stepsPanel:document.getElementById('stepsPanel'), syntaxPanel:document.getElementById('syntaxPanel'),
   checkpointsPanel:document.getElementById('checkpointsPanel'), hintsPanel:document.getElementById('hintsPanel'), gotchasPanel:document.getElementById('gotchasPanel'), refPanel:document.getElementById('refPanel'),
@@ -575,7 +586,7 @@ function getQuestionPromptText(p){
   if(!p) return 'Open a problem to see its objective.';
   const checkpoints=(p.steps||[]).map(s=>`- ${s}`).join('\n');
   const dt=(p.doctests||'').trim();
-  return `Build: ${p.title}\nTopic: ${p.topic}\n\nWhat to do:\nImplement the starter code to satisfy the problem behavior and examples.\n\nCheckpoint plan:\n${checkpoints || '- implement core logic'}\n\nDoctests (terminal will run these after your code):\n${dt||'(none)'}\n\nStarter:\n${p.starter || '""" YOUR CODE HERE """'}`;
+  return `Build: ${p.title}\nTopic: ${p.topic}\n\nWhat to do:\nImplement the starter code to satisfy the problem behavior and examples.\n\nCheckpoint plan:\n${checkpoints || '- implement core logic'}\n\nDoctests (doctest output window runs these after your code):\n${dt||'(none)'}\n\nStarter:\n${p.starter || '""" YOUR CODE HERE """'}`;
 }
 
 async function generateQuestionDigest(i){
@@ -661,6 +672,12 @@ function updateWindowScaledText(win){
     el.terminalOutput.style.lineHeight=(size*1.45)+'px';
     return;
   }
+  if(win===el.doctestTermWin){
+    const size=Math.max(12,Math.min(36,Math.min(w*0.035,h*0.06)));
+    el.doctestTermOutput.style.fontSize=size+'px';
+    el.doctestTermOutput.style.lineHeight=(size*1.45)+'px';
+    return;
+  }
   if(win===el.questionWin){
     const q=el.questionWinBody.querySelector('.questionText, .questionMd');
     if(!q) return;
@@ -698,40 +715,30 @@ async function ensurePyodide(){
   return state.pyodide;
 }
 
-async function runCodeInTerminal(opts){
+function stripDoctestMarkdownFence(s){
+  let t=String(s||'').trim();
+  if(!t.startsWith('```')) return t;
+  t=t.replace(/^```[a-zA-Z0-9_-]*\s*/, '');
+  const i=t.lastIndexOf('```');
+  if(i>=0) t=t.slice(0,i).trim();
+  return t.trim();
+}
+
+async function runPlainPythonInTerminal(opts){
   opts=opts||{};
   const openFirst=opts.openTerminal===true;
   if(openFirst) toggleWindow(el.terminalWin,true);
   el.terminalOutput.textContent='Loading Python runtime...';
   try{
     const py=await ensurePyodide();
-    const cur=state.problems[state.idx];
-    const dtRaw=cur && typeof cur.doctests==='string' ? cur.doctests : '';
     py.globals.set('USER_CODE', el.editor.value || '');
-    py.globals.set('USER_DOCTESTS', dtRaw);
-    await py.runPythonAsync(`import io, sys, traceback, doctest
+    await py.runPythonAsync(`import io, sys, traceback
 _buf=io.StringIO(); _err=io.StringIO()
 _oldo,_olde=sys.stdout,sys.stderr
 sys.stdout,sys.stderr=_buf,_err
-_g={}
 try:
+    _g={}
     exec(USER_CODE, _g)
-    _raw = USER_DOCTESTS if USER_DOCTESTS is not None else ""
-    _dt = (_raw if isinstance(_raw, str) else str(_raw)).strip()
-    if _dt:
-        print()
-        print("--- doctests ---")
-        print()
-        # run_docstring_examples() calls inspect.getsourcefile() — fails in Pyodide for
-        # synthetic objects. Parse the doctest string and run with DocTestRunner instead.
-        parser = doctest.DocTestParser()
-        test = parser.get_doctest(_dt, _g, "problem_doctests", "<doctests>", 0)
-        runner = doctest.DocTestRunner(verbose=True)
-        runner.run(test)
-    else:
-        print()
-        print("(no doctests for this problem)")
-        print()
 except Exception:
     traceback.print_exc(file=_err)
 finally:
@@ -746,6 +753,61 @@ RUN_OUTPUT=_buf.getvalue()+_err.getvalue()`);
     el.terminalOutput.textContent='Run failed: '+String(err.message||err);
     if(!openFirst && !el.terminalWin.classList.contains('show')){
       setFeedback('warn','Run failed — open Terminal to see the error');
+    }
+  }
+}
+
+async function runDoctestsInTerminal(opts){
+  opts=opts||{};
+  const openFirst=opts.openDoctestTerm===true;
+  if(openFirst) toggleWindow(el.doctestTermWin,true);
+  el.doctestTermOutput.textContent='Loading Python runtime...';
+  try{
+    const py=await ensurePyodide();
+    const cur=state.problems[state.idx];
+    const dtRaw=cur && typeof cur.doctests==='string' ? cur.doctests : '';
+    py.globals.set('USER_CODE', el.editor.value || '');
+    py.globals.set('USER_DOCTESTS', stripDoctestMarkdownFence(dtRaw));
+    await py.runPythonAsync(`import io, sys, traceback, doctest
+_buf=io.StringIO(); _err=io.StringIO()
+_oldo,_olde=sys.stdout,sys.stderr
+sys.stdout,sys.stderr=_buf,_err
+_g={}
+try:
+    exec(USER_CODE, _g)
+    _raw = USER_DOCTESTS if USER_DOCTESTS is not None else ""
+    _dt = (_raw if isinstance(_raw, str) else str(_raw)).strip()
+    if _dt:
+        print("--- doctests ---\\n")
+        parser = doctest.DocTestParser()
+        test = parser.get_doctest(_dt, _g, "problem_doctests", "<doctests>", 0)
+        if not test.examples:
+            print("No doctest examples were parsed (need lines starting with >>>).")
+            print("If you see text below but no >>>, fix the problem JSON or paste examples into doctests.")
+            print()
+            print("--- raw doctest field (first 1500 chars) ---")
+            print(_dt if len(_dt)<=1500 else (_dt[:1500]+"\\n..."))
+        else:
+            runner = doctest.DocTestRunner(verbose=True)
+            res = runner.run(test, clear_globs=False)
+            print()
+            print("--- summary: %d tried, %d failed ---" % (res.attempted, res.failed))
+    else:
+        print("(no doctests configured for this problem)")
+except Exception:
+    traceback.print_exc(file=_err)
+finally:
+    sys.stdout,sys.stderr=_oldo,_olde
+RUN_OUTPUT=_buf.getvalue()+_err.getvalue()`);
+    const out=py.globals.get('RUN_OUTPUT');
+    el.doctestTermOutput.textContent=(out && String(out).trim()) ? String(out) : '(no output)';
+    if(!openFirst && !el.doctestTermWin.classList.contains('show')){
+      setFeedback('info','Doctest run finished — open doctest output to view');
+    }
+  }catch(err){
+    el.doctestTermOutput.textContent='Run failed: '+String(err.message||err);
+    if(!openFirst && !el.doctestTermWin.classList.contains('show')){
+      setFeedback('warn','Doctest run failed — open doctest output to see the error');
     }
   }
 }
@@ -1157,7 +1219,7 @@ function buildSyntaxFallbackSheet(p){
     ex('Visit children','Often: handle current node, then <strong>for each child</strong> recurse. Mutating helpers sometimes loop until a local invariant holds.',`def walk(node):\n    if not node.children:\n        return\n    while ____:\n        ____\n    for ch in node.children:\n        walk(ch)`) +
     sqlBlock+
     sec('Illustrative doctest (not your homework)')+
-    ex('ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)','Your real checks run from <strong>doctests ▸ Run doctests</strong> (opens the terminal). This only shows how <code>&gt;&gt;&gt;</code> lines and expected output teach behavior.',`def toy_prune(node, keep):\n    """Toy tree: keep smallest labels (illustration; ____ not filled).\n\n    >>> r = Node(6, [Node(9), Node(2)])\n    >>> toy_prune(r, 1)\n    >>> r.children[0].label\n    2\n    """\n    while ____:\n        ____\n    for c in node.children:\n        toy_prune(c, keep)\n`)+
+    ex('ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)','Your real checks run from <strong>doctests ▸ Run doctests</strong> (opens the doctest output window, not the plain Python terminal). This only shows how <code>&gt;&gt;&gt;</code> lines and expected output teach behavior.',`def toy_prune(node, keep):\n    """Toy tree: keep smallest labels (illustration; ____ not filled).\n\n    >>> r = Node(6, [Node(9), Node(2)])\n    >>> toy_prune(r, 1)\n    >>> r.children[0].label\n    2\n    """\n    while ____:\n        ____\n    for c in node.children:\n        toy_prune(c, keep)\n`)+
   `</div>`;
 }
 
@@ -1226,7 +1288,7 @@ STRUCTURE (required):
 Cover the **topic** (e.g. recursion → base case, trust-the-call, combining results; trees → children loop + base on leaves; SQL → SELECT/WHERE/JOIN/GROUP BY as appropriate). Skip unrelated language trivia.
 
 3) **Required last synItem**: synKw must be exactly <div class="synKw">ILLUSTRATIVE DOCTESTS (NOT YOUR HOMEWORK)</div>
-   - synDef: their real tests run from doctests ▸ Run doctests (terminal); this block only teaches **doctest shape** (docstring with >>> and expected lines).
+   - synDef: their real tests run from doctests ▸ Run doctests (doctest output window); this block only teaches **doctest shape** (docstring with >>> and expected lines).
    - <pre class="synEx">: a short **fake** function with a docstring containing 2–4 >>> examples and a body full of ____ (not a complete runnable solution). May resemble tree/list/mutation *patterns* without copying their types or names.
 
 Allowed tags: div, h3, p, pre, strong, em, code, br. Allowed classes only: refDoc, syntaxRef, synSimple, synSection, synItem, synKw, synDef, synEx, synNote. No markdown fences. No starter identifiers.`;
@@ -1344,7 +1406,7 @@ function loadProblem(i){
   renderChips();
   renderQuestionPrompt();
   generateQuestionDigest(i);
-  setFeedback('info','write under """ YOUR CODE HERE """ — use doctests ▸ Run doctests to open the terminal and test');
+  setFeedback('info','write under """ YOUR CODE HERE """ — Terminal runs plain Python; doctests ▸ Run doctests opens doctest output');
 
   generateStepsPanel(i);
   generateSupportPanels(i);
@@ -1461,6 +1523,7 @@ Each item has shape: {name,title,starter,steps,topic,doctests}.
   el.app.classList.add('show');
   el.sessionName.textContent=raw.slice(0,58)+(raw.length>58?'...':'');
   toggleWindow(el.terminalWin,false);
+  toggleWindow(el.doctestTermWin,false);
   toggleWindow(el.doctestWin,false);
 
   state.idx=-1;
@@ -1533,6 +1596,7 @@ Each item has shape: {name,title,starter,steps,topic,doctests}.
   el.app.classList.add('show');
   el.sessionName.textContent=(raw||'new practice').slice(0,58)+((raw||'').length>58?'...':'');
   toggleWindow(el.terminalWin,false);
+  toggleWindow(el.doctestTermWin,false);
   toggleWindow(el.doctestWin,false);
 
   state.idx=-1;
@@ -1548,6 +1612,7 @@ function toggleNewOverlay(show){
 function goHome(){
   saveCurrentSolution();
   toggleWindow(el.terminalWin,false);
+  toggleWindow(el.doctestTermWin,false);
   toggleWindow(el.doctestWin,false);
   el.app.classList.remove('show');
   el.home.classList.remove('hide');
@@ -1855,7 +1920,7 @@ function bindEvents(){
   };
   el.doctestRunOpt.onclick=()=>{
     el.doctestMenu.classList.remove('show');
-    runCodeInTerminal({ openTerminal: true });
+    runDoctestsInTerminal({ openDoctestTerm: true });
   };
   el.doctestViewOpt.onclick=()=>{
     el.doctestMenu.classList.remove('show');
@@ -1880,12 +1945,15 @@ function bindEvents(){
   el.newBtn.onclick=()=>toggleNewOverlay(true);
   el.questionWinClose.onclick=()=>toggleWindow(el.questionWin,false);
   el.terminalWinClose.onclick=()=>toggleWindow(el.terminalWin,false);
+  el.doctestTermWinClose.onclick=()=>toggleWindow(el.doctestTermWin,false);
   el.doctestWinClose.onclick=()=>toggleWindow(el.doctestWin,false);
   toggleWindow(el.terminalWin,false);
+  toggleWindow(el.doctestTermWin,false);
   toggleWindow(el.doctestWin,false);
-  if(el.runDoctestsTermBtn) el.runDoctestsTermBtn.onclick=()=>runCodeInTerminal({ openTerminal: true });
-  el.runCodeBtn.onclick=()=>runCodeInTerminal({ openTerminal: false });
+  el.doctestTermRunBtn.onclick=()=>runDoctestsInTerminal({ openDoctestTerm: true });
+  el.runCodeBtn.onclick=()=>runPlainPythonInTerminal({ openTerminal: true });
   el.clearTermBtn.onclick=()=>{el.terminalOutput.textContent='(cleared)';};
+  el.clearDoctestTermBtn.onclick=()=>{el.doctestTermOutput.textContent='(cleared)';};
 
   el.fontSlider.oninput=()=>setEditorFont(Number(el.fontSlider.value));
   setEditorFont(23);
@@ -1967,9 +2035,11 @@ function bindEvents(){
   renderQuestionPrompt();
   makeWindowMovable(el.questionWin, el.questionWinHead);
   makeWindowMovable(el.terminalWin, el.terminalWinHead);
+  makeWindowMovable(el.doctestTermWin, el.doctestTermWinHead);
   makeWindowMovable(el.doctestWin, el.doctestWinHead);
   updateWindowScaledText(el.questionWin);
   updateWindowScaledText(el.terminalWin);
+  updateWindowScaledText(el.doctestTermWin);
   updateWindowScaledText(el.doctestWin);
 
   if(typeof ResizeObserver !== 'undefined'){
@@ -1981,10 +2051,12 @@ function bindEvents(){
     const popObserver = new ResizeObserver(()=>{
       updateWindowScaledText(el.questionWin);
       updateWindowScaledText(el.terminalWin);
+      updateWindowScaledText(el.doctestTermWin);
       updateWindowScaledText(el.doctestWin);
     });
     popObserver.observe(el.questionWin);
     popObserver.observe(el.terminalWin);
+    popObserver.observe(el.doctestTermWin);
     popObserver.observe(el.doctestWin);
   }
 }
