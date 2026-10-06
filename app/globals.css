@@ -7,8 +7,8 @@
 html,
 body {
   min-height: 100%;
-  background: #0d1117;
-  color: #e6edf3;
+  background: #111411;
+  color: #efeee8;
   font-family:
     ui-sans-serif,
     system-ui,
@@ -18,7 +18,7 @@ body {
 }
 
 a {
-  color: #38bdf8;
+  color: #c8d66d;
   text-decoration: none;
 }
 
