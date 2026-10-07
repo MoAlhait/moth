@@ -3,7 +3,7 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 
 export default function Home() {
-  const apiKeyConfigured = Boolean(process.env.ANTHROPIC_API_KEY?.trim())
+  const apiKeyConfigured = Boolean(process.env.DEEPSEEK_API_KEY?.trim() || process.env.ANTHROPIC_API_KEY?.trim())
 
   return (
     <main
@@ -34,7 +34,7 @@ export default function Home() {
       <p style={{ color: '#c4c6bc', textAlign: 'center', maxWidth: 420 }}>
         Homework helper runs at <code style={{ color: '#efeee8' }}>/moth</code>. API calls go through{' '}
         <code style={{ color: '#efeee8' }}>/api/claude</code> using{' '}
-        <code style={{ color: '#efeee8' }}>ANTHROPIC_API_KEY</code> on the server.
+        <code style={{ color: '#efeee8' }}>DEEPSEEK_API_KEY</code> (or <code style={{ color: '#efeee8' }}>ANTHROPIC_API_KEY</code> as a backup) on the server.
       </p>
       <p
         style={{
@@ -49,8 +49,8 @@ export default function Home() {
         }}
       >
         {apiKeyConfigured
-          ? 'Anthropic API key is loaded (server). Open /moth to use Claude.'
-          : 'No ANTHROPIC_API_KEY in the environment. Copy .env.example to .env.local, add your key from console.anthropic.com, then restart npm run dev.'}
+          ? 'API key is loaded (server). Open /moth to start.'
+          : 'No API key in the environment. Add DEEPSEEK_API_KEY to .env.local (key from platform.deepseek.com), then restart npm run dev.'}
       </p>
       <nav style={{ marginTop: 8 }}>
         <Link
