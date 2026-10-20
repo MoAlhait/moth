@@ -4,3 +4,4 @@ out
 .env*.local
 *.pem
 .DS_Store
+.vercel
