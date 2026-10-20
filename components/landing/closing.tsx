@@ -28,7 +28,7 @@ export function Closing() {
         </div>
 
         {/* the last and smallest lantern, at the left edge: where the moth ends its flight */}
-        <SmallLantern anchor="closing" order={8} className="absolute top-0 left-[2%] aspect-square w-28 sm:top-1/2 sm:left-[4%] sm:w-40 sm:-translate-y-1/2" />
+        <SmallLantern anchor="closing" order={8} className="absolute top-0 left-[2%] aspect-square w-28 sm:top-auto sm:bottom-[8%] sm:left-[4%] sm:w-40" />
         <div className="relative">
           <Reveal>
             <Seal className={`mx-auto mb-10 size-14 rounded-lg transition-transform duration-500 ease-expo ${eager ? 'scale-110 -rotate-3' : ''}`} />

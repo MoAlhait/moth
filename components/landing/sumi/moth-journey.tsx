@@ -57,52 +57,70 @@ export function MothJourney() {
     let x = 0, y = 0, w = 0, rot = 0, vx = 0, vy = 0, phase = 0, sweep = 1, open = 1, glow = 0
     let placed = false, last = performance.now(), raf = 0, wasFlying = false, touchAt = -1e9
 
-    // perch and fly: the moth sits on stop `cur` until another stop is on screen with room to
-    // land, then makes one whole flight there on its own clock. It never hangs in the air.
+    // perch and fly: the moth rests on stop `cur` until that perch drifts out of the part of the
+    // screen you're reading, then flies to the next stop in the direction you're scrolling, but
+    // only once that stop is on screen with room to land. Each flight runs on its own clock and
+    // always lands, so it never hangs in the air, and it rests a moment before leaving again.
     type Pt = { x: number; y: number }
-    let cur = 0
+    let cur = 0, dir = 1, lastSc = scrollY, landedAt = -1e9
     let flight: null | { to: number; t0: number; dur: number; route: Pt[]; w0: number } = null
-    const BAND_TOP = 0.16, BAND_BOT = 0.82
 
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame)
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
       const sc = scrollY, vh = innerHeight
+      if (Math.abs(sc - lastSc) > 0.5) { dir = sc > lastSc ? 1 : -1; lastSc = sc }
       // wait for the hero moth to land, unless the reader has already started scrolling
       if ((!journey.heroLanded && sc < 40) || stops.length < 2) { root.style.opacity = '0'; return }
 
       const pts = stops.map(pointOf)
-      // room to land: the landing point sits comfortably inside the screen, not at an edge
-      // at the very bottom of the page the last perch can't scroll any lower, so it may sit nearer the top
+      // room to land: clear of the nav bar and the bottom edge, in px as well as screen share so
+      // short windows still leave the moth space. At the very bottom of the page the last perch
+      // can't scroll any lower, so it may sit nearer the top.
       const atEnd = sc >= document.documentElement.scrollHeight - vh - 4
-      const roomy = (i: number) => pts[i].y > (atEnd ? 40 : vh * BAND_TOP) && pts[i].y < vh * BAND_BOT && pts[i].x > 30 && pts[i].x < innerWidth - 30
+      const top = atEnd ? 72 : Math.max(vh * 0.16, 84), bottom = Math.min(vh * 0.84, vh - 48)
+      const roomy = (i: number) => !stops[i].pass && pts[i].y > top && pts[i].y < bottom && pts[i].x > 30 && pts[i].x < innerWidth - 30
 
-      if (!flight) {
-        // where it would like to be: the stop with room to land nearest the middle of the screen
+      const takeOff = (to: number) => {
+        // a perch that has scrolled far away launches it from just past the screen edge, so it
+        // glides in at its normal pace instead of streaking across thousands of pixels
+        const from = { x, y: clamp(y, -80, vh + 80) + sc }, toY = pts[to].y + sc
+        y = from.y - sc
+        const down = toY > from.y
+        // if the principle text lies on the way and is on screen, cross over it
+        const via = stops
+          .map((st, i) => ({ st, i }))
+          .filter(({ st, i }) => st.pass && pts[i].y > -vh * 0.1 && pts[i].y < vh * 1.1 && (pts[i].y + sc - from.y) * (pts[i].y + sc - toY) < 0)
+          .sort((p, q) => (down ? p.st.order - q.st.order : q.st.order - p.st.order))
+          .map(({ i }) => ({ x: pts[i].x, y: pts[i].y + sc }))
+        const dist = Math.hypot(pts[to].x - x, pts[to].y - y) + via.length * 240
+        flight = { to, t0: now, dur: clamp(dist / 520, 0.9, 2.6) * 1000, route: [from, ...via], w0: w }
+      }
+      const nearestMiddle = () => {
         let best = -1, bestD = Infinity
-        stops.forEach((st, i) => {
-          if (st.pass || !roomy(i)) return
+        stops.forEach((_, i) => {
           const d = Math.abs(pts[i].y - vh * 0.5)
-          if (d < bestD) { bestD = d; best = i }
+          if (roomy(i) && d < bestD) { bestD = d; best = i }
         })
-        const curD = roomy(cur) ? Math.abs(pts[cur].y - vh * 0.5) : Infinity
+        return best
+      }
+
+      if (!placed) {
         // a page opened partway down starts with the moth already resting where you are
-        if (!placed && best >= 0) cur = best
-        else if (best >= 0 && best !== cur && bestD + vh * 0.12 < curD) {
-          // take off; if the principle text lies on the way and is on screen, cross over it
-          // a perch that has scrolled far away launches it from just past the screen edge, so it
-          // glides in at its normal pace instead of streaking across thousands of pixels
-          const from = { x, y: clamp(y, -80, vh + 80) + sc }, toY = pts[best].y + sc
-          y = from.y - sc
-          const down = toY > from.y
-          const via = stops
-            .map((st, i) => ({ st, i }))
-            .filter(({ st, i }) => st.pass && pts[i].y > -vh * 0.1 && pts[i].y < vh * 1.1 && (pts[i].y + sc - from.y) * (pts[i].y + sc - toY) < 0)
-            .sort((p, q) => (down ? p.st.order - q.st.order : q.st.order - p.st.order))
-            .map(({ i }) => ({ x: pts[i].x, y: pts[i].y + sc }))
-          const dist = Math.hypot(pts[best].x - x, pts[best].y - y) + via.length * 240
-          flight = { to: best, t0: now, dur: clamp(dist / 520, 0.8, 2.6) * 1000, route: [from, ...via], w0: w }
+        const best = nearestMiddle()
+        if (best >= 0) cur = best
+      } else if (!flight && now - landedAt > 450) {
+        const p = pts[cur]
+        // its perch is sliding off the side of the screen you're scrolling away from
+        const leaving = dir > 0 ? p.y < vh * 0.3 : p.y > vh * 0.74
+        if (leaving || !roomy(cur)) {
+          let next = -1
+          if (dir > 0) { for (let i = cur + 1; i < stops.length; i++) if (roomy(i)) { next = i; break } }
+          else { for (let i = cur - 1; i >= 0; i--) if (roomy(i)) { next = i; break } }
+          // the reader jumped somewhere else entirely: settle wherever they are
+          if (next < 0 && !roomy(cur) && (p.y < -vh * 0.2 || p.y > vh * 1.2)) next = nearestMiddle()
+          if (next >= 0 && next !== cur) takeOff(next)
         }
       }
 
@@ -123,7 +141,7 @@ export function MothJourney() {
         ty = q * q * p0.y + 2 * q * lt * cy + lt * lt * p1.y + Math.sin(now * 0.0047 + 1) * 5 * Math.sin(Math.PI * u)
         tw = flight.w0 + (target.w - flight.w0) * u
         trot = stops[flight.to].rot
-        if (now - flight.t0 >= flight.dur) { cur = flight.to; flight = null }
+        if (now - flight.t0 >= flight.dur) { cur = flight.to; flight = null; landedAt = now; perched = stops[cur] }
       } else {
         const p = pts[cur]
         tx = p.x; ty = p.y; tw = p.w; trot = stops[cur].rot; perched = stops[cur]
