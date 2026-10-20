@@ -1,27 +1,188 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@import 'tailwindcss';
+
+/* night theme from the logo painting: a dark room, rice-paper text, the lantern as the only warm light */
+@theme {
+  --color-night: #0e0c0a;
+  --color-night-2: #16130f;
+  --color-night-3: #201b16;
+  --color-rice: #ede3cd;
+  --color-rice-2: #c4b79e;
+  --color-rice-3: #8c806c;
+  --color-rice-4: #5d5547;
+  --color-vermilion: #cc4630;
+  --color-vermilion-2: #e25e40;
+  --color-ochre: #d9954a;
+  --color-ochre-2: #f0bd76;
+  --color-indigo: #98abd0;
+  /* inkstone, a touch deeper than the night, for code */
+  --color-sumi: #090807;
+  --color-sumi-2: #12100d;
+  --color-sumi-3: #1d1915;
+  --color-cream: #efe3c6;
+
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-brush: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --animate-marquee: marquee 56s linear infinite;
+  --animate-blink: blink 1.1s steps(1) infinite;
+  --animate-breathe: breathe 7s ease-in-out infinite;
+
+  @keyframes marquee {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(-50%, 0, 0); }
+  }
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+  @keyframes breathe {
+    0%, 100% { opacity: .55; transform: scale(1); }
+    50% { opacity: .8; transform: scale(1.04); }
+  }
 }
 
-html,
-body {
-  min-height: 100%;
-  background: #0d1117;
-  color: #e6edf3;
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    sans-serif;
-  font-size: 15px;
-  line-height: 1.5;
+@theme inline {
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-mincho), 'Hiragino Mincho ProN', Georgia, serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, monospace;
 }
 
-a {
-  color: #38bdf8;
-  text-decoration: none;
+@layer base {
+  html {
+    background: var(--color-night);
+    color: var(--color-rice);
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100%;
+    background: var(--color-night);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background: rgb(240 189 118 / 0.3);
+    color: var(--color-rice);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-vermilion);
+    outline-offset: 3px;
+  }
 }
 
-a:hover {
-  text-decoration: underline;
+@layer components {
+  /* a panel catching a little of the lantern light from above */
+  .washi {
+    background: linear-gradient(180deg, rgb(240 189 118 / 0.045), transparent 60%), var(--color-night-2);
+    border: 1px solid rgb(237 227 205 / 0.08);
+    box-shadow:
+      inset 0 1px 0 rgb(240 189 118 / 0.08),
+      0 30px 60px -30px rgb(0 0 0 / 0.8);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-rice-3);
+  }
+
+  /* night air: a faint grain over everything so the dark never looks flat */
+  .night::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.07;
+    mix-blend-mode: screen;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  }
+  /* the room darkens toward the corners, away from the lantern */
+  .night::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 59;
+    pointer-events: none;
+    background: radial-gradient(120% 90% at 50% 35%, transparent 50%, rgb(0 0 0 / 0.5) 100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* small lanterns down the page: a weak breeze, and a warmer glow while the moth rests on them */
+@keyframes lantern-breeze {
+  0% { transform: rotate(-1.1deg); }
+  50% { transform: rotate(1.3deg); }
+  100% { transform: rotate(-1.1deg); }
+}
+.sumi-small-lantern [data-sway] {
+  animation: lantern-breeze 6.5s ease-in-out infinite;
+}
+.sumi-small-lantern:nth-of-type(2n) [data-sway] {
+  animation-duration: 7.7s;
+  animation-delay: -2s;
+}
+/* the painted halo is clipped by the painting's box, so small lanterns throw their light from a layer behind it */
+.sumi-small-lantern [data-glow] {
+  opacity: 0 !important;
+}
+.lantern-light {
+  position: absolute;
+  left: 57%;
+  top: 52%;
+  width: 340%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  scale: 0.85;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    closest-side,
+    rgb(255 214 150 / 0.5),
+    rgb(244 160 80 / 0.26) 14%,
+    rgb(214 110 50 / 0.13) 32%,
+    rgb(170 70 30 / 0.06) 55%,
+    rgb(120 45 20 / 0.02) 78%,
+    transparent
+  );
+  opacity: 0.55;
+  transition: opacity 1.6s ease, scale 1.6s ease;
+  animation: lantern-flicker 4.7s linear infinite;
+}
+.sumi-small-lantern[data-lit='1'] .lantern-light {
+  opacity: 1;
+  scale: 1.1;
+}
+/* a candle's unevenness: small irregular swells, never a steady pulse */
+@keyframes lantern-flicker {
+  0% { filter: brightness(1); }
+  9% { filter: brightness(1.07); }
+  15% { filter: brightness(0.95); }
+  27% { filter: brightness(1.04); }
+  38% { filter: brightness(0.98); }
+  46% { filter: brightness(1.1); }
+  55% { filter: brightness(0.96); }
+  71% { filter: brightness(1.03); }
+  83% { filter: brightness(0.94); }
+  100% { filter: brightness(1); }
 }
