@@ -142,10 +142,47 @@
   animation-duration: 7.7s;
   animation-delay: -2s;
 }
+/* the painted halo is clipped by the painting's box, so small lanterns throw their light from a layer behind it */
 .sumi-small-lantern [data-glow] {
-  opacity: 0.55 !important;
-  transition: opacity 1.2s ease;
+  opacity: 0 !important;
 }
-.sumi-small-lantern[data-lit='1'] [data-glow] {
-  opacity: 1 !important;
+.lantern-light {
+  position: absolute;
+  left: 57%;
+  top: 52%;
+  width: 340%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  scale: 0.85;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    closest-side,
+    rgb(255 214 150 / 0.5),
+    rgb(244 160 80 / 0.26) 14%,
+    rgb(214 110 50 / 0.13) 32%,
+    rgb(170 70 30 / 0.06) 55%,
+    rgb(120 45 20 / 0.02) 78%,
+    transparent
+  );
+  opacity: 0.55;
+  transition: opacity 1.6s ease, scale 1.6s ease;
+  animation: lantern-flicker 4.7s linear infinite;
+}
+.sumi-small-lantern[data-lit='1'] .lantern-light {
+  opacity: 1;
+  scale: 1.1;
+}
+/* a candle's unevenness: small irregular swells, never a steady pulse */
+@keyframes lantern-flicker {
+  0% { filter: brightness(1); }
+  9% { filter: brightness(1.07); }
+  15% { filter: brightness(0.95); }
+  27% { filter: brightness(1.04); }
+  38% { filter: brightness(0.98); }
+  46% { filter: brightness(1.1); }
+  55% { filter: brightness(0.96); }
+  71% { filter: brightness(1.03); }
+  83% { filter: brightness(0.94); }
+  100% { filter: brightness(1); }
 }

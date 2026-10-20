@@ -48,12 +48,17 @@ function Step({ step, index }: { step: (typeof steps)[number]; index: number }) 
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '0px 0px -15% 0px' }}
       transition={{ duration: 1, delay: index * 0.05, ease }}
-      className="group relative rounded-3xl border border-rice/10 bg-night-2/40 p-7 transition-[border-color,background-color,box-shadow] duration-1000 data-[lit=1]:border-ochre/40 data-[lit=1]:bg-night-2 data-[lit=1]:shadow-[0_0_90px_-24px_rgb(240_170_95/0.4)] sm:p-9"
+      className="group relative isolate rounded-3xl border border-rice/10 bg-night-2/40 p-7 transition-[border-color,background-color] duration-1000 data-[lit=1]:border-rice/15 data-[lit=1]:bg-night-2/80 sm:p-9"
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(70%_60%_at_14%_0%,rgb(240,170,95,0.16),transparent_70%)] opacity-0 transition-opacity duration-1000 group-data-[lit=1]:opacity-100"
-      />
+      {/* light from the moth where it rests on the top edge: a pool inside the panel, a warm
+          catch along the rim near it, and a little spill past the edge, all fading with distance */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-[1400ms] group-data-[lit=1]:opacity-100">
+        <div className="absolute top-0 left-[14%] size-[34rem] -translate-1/2 animate-[lantern-flicker_4.7s_linear_infinite] rounded-full bg-[radial-gradient(closest-side,rgb(250,190,120,0.13),rgb(230,140,70,0.06)_40%,transparent)]" />
+        <div className="absolute inset-0 overflow-hidden rounded-3xl">
+          <div className="absolute inset-0 animate-[lantern-flicker_4.7s_linear_infinite] bg-[radial-gradient(55%_85%_at_14%_0%,rgb(255,206,140,0.2),rgb(236,150,80,0.08)_38%,transparent_72%)]" />
+        </div>
+        <div className="absolute -inset-px rounded-3xl border border-transparent [background:radial-gradient(38%_120%_at_14%_0%,rgb(255,200,130,0.75),rgb(240,160,90,0.15)_45%,transparent_70%)_border-box] [mask:linear-gradient(#000_0_0)_padding-box_exclude,linear-gradient(#000_0_0)]" />
+      </div>
       <div className="relative mb-10 flex items-center justify-between">
         <span
           className="font-display text-6xl leading-none font-semibold text-rice/15 transition-colors duration-1000 group-data-[lit=1]:text-vermilion"

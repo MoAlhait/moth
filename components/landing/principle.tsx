@@ -28,7 +28,7 @@ function Word({ progress, range, children, className }: {
         {children}
       </motion.span>
       {/* lantern light the passing moth leaves on the word for a moment */}
-      <span data-word-glow aria-hidden className="absolute inset-0 text-ochre-2 opacity-0 [text-shadow:0_0_18px_rgb(240_170_95/0.6)]">
+      <span data-word-glow aria-hidden className="absolute inset-0 text-ochre-2 opacity-0 [text-shadow:0_0_14px_rgb(240_170_95/0.3)]">
         {children}
       </span>
     </motion.span>
@@ -56,7 +56,7 @@ export function Principle() {
         if (near) {
           const r = g.getBoundingClientRect()
           const d = Math.hypot(r.left + r.width / 2 - journey.x, r.top + r.height / 2 - journey.y)
-          target = Math.max(0, 1 - d / 110) * 0.85
+          target = Math.max(0, 1 - d / 110) * 0.55
         }
         // rise quickly as it passes, fade slowly once it has gone
         level[i] = target > level[i] ? level[i] + (target - level[i]) * 0.35 : level[i] * 0.94

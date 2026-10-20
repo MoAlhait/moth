@@ -21,7 +21,12 @@ export function SmallLantern({ className, anchor, order }: { className?: string;
       data-moth-ay="0.41"
       data-moth-size="0.416"
       data-moth-rot="-14"
-      dangerouslySetInnerHTML={{ __html: markup }}
-    />
+    >
+      <div className="relative size-full">
+        {/* the light it throws, outside the painting's box so it can fade out softly */}
+        <span className="lantern-light" />
+        <div className="relative size-full" dangerouslySetInnerHTML={{ __html: markup }} />
+      </div>
+    </div>
   )
 }
