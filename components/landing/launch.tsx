@@ -3,14 +3,14 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
-import { MothMark } from './moth-mark'
+import { Seal } from './sumi/seal'
 
 type Origin = { x: number; y: number; r: number }
 
 const LaunchContext = createContext<(e: React.MouseEvent<HTMLAnchorElement>) => void>(() => {})
 
 /**
- * Page transition into the app: a lime wipe and then an ink wipe grow out of
+ * Page transition into the app: a vermilion wipe and then a paper wipe grow out of
  * the clicked button, and the route changes once the screen is covered.
  */
 export function LaunchProvider({ children }: { children: React.ReactNode }) {
@@ -57,7 +57,7 @@ export function LaunchProvider({ children }: { children: React.ReactNode }) {
         */}
         {origin && (
           <motion.div key="wipe" className="fixed inset-0 z-[100] overflow-hidden">
-            {(['bg-lime', 'bg-ink'] as const).map((bg, i) => (
+            {(['bg-vermilion', 'bg-night'] as const).map((bg, i) => (
               <motion.div
                 key={bg}
                 aria-hidden
@@ -81,7 +81,7 @@ export function LaunchProvider({ children }: { children: React.ReactNode }) {
               transition={{ delay: 0.55, duration: 0.6 }}
             >
               <div className="flex flex-col items-center gap-4">
-                <MothMark className="size-12 animate-pulse" />
+                <Seal className="size-14 animate-pulse rounded-lg" />
                 <span className="eyebrow">opening moth</span>
               </div>
             </motion.div>

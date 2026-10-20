@@ -1,14 +1,13 @@
 import type { Metadata, Viewport } from 'next'
-import { DM_Mono, DM_Sans, DM_Serif_Display } from 'next/font/google'
+import { DM_Mono, DM_Sans, Shippori_Mincho } from 'next/font/google'
 import { MotionProvider } from '@/components/landing/motion-provider'
 import './globals.css'
 
 const sans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans', display: 'swap' })
-const serif = DM_Serif_Display({
+const mincho = Shippori_Mincho({
   subsets: ['latin'],
-  weight: '400',
-  style: ['normal', 'italic'],
-  variable: '--font-dm-serif',
+  weight: ['500', '600', '700', '800'],
+  variable: '--font-mincho',
   display: 'swap',
 })
 const mono = DM_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-dm-mono', display: 'swap' })
@@ -24,7 +23,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#111411',
+  themeColor: '#0e0c0a',
 }
 
 export default function RootLayout({
@@ -33,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable} ${mono.variable}`}>
+    <html lang="en" className={`${sans.variable} ${mincho.variable} ${mono.variable}`}>
       <body>
         <MotionProvider>{children}</MotionProvider>
       </body>

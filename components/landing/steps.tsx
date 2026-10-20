@@ -1,6 +1,6 @@
 'use client'
 
-import { motion, useInView, useScroll, useTransform } from 'framer-motion'
+import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
 import { ease } from './motion-provider'
 import { Reveal, SplitWords } from './reveal'
@@ -34,31 +34,36 @@ const steps = [
 
 function Step({ step, index }: { step: (typeof steps)[number]; index: number }) {
   const ref = useRef<HTMLLIElement>(null)
-  const active = useInView(ref, { margin: '-45% 0px -45% 0px' })
 
   return (
     <motion.li
       ref={ref}
+      data-moth-anchor={`step-${step.n}`}
+      data-moth-order={2 + index}
+      data-moth-ax="0.14"
+      data-moth-ay="0"
+      data-moth-size="64"
+      data-moth-rot="-8"
       initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '0px 0px -15% 0px' }}
       transition={{ duration: 1, delay: index * 0.05, ease }}
-      className={`group relative rounded-3xl border p-7 transition-[border-color,background-color] duration-700 sm:p-9 ${
-        active ? 'border-lime/25 bg-ink-2/70' : 'border-bone/[0.07] bg-ink-1/40'
-      }`}
+      className="group relative rounded-3xl border border-rice/10 bg-night-2/40 p-7 transition-[border-color,background-color,box-shadow] duration-1000 data-[lit=1]:border-ochre/40 data-[lit=1]:bg-night-2 data-[lit=1]:shadow-[0_0_90px_-24px_rgb(240_170_95/0.4)] sm:p-9"
     >
-      <div className="mb-10 flex items-center justify-between">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(70%_60%_at_14%_0%,rgb(240,170,95,0.16),transparent_70%)] opacity-0 transition-opacity duration-1000 group-data-[lit=1]:opacity-100"
+      />
+      <div className="relative mb-10 flex items-center justify-between">
         <span
-          className={`font-serif text-6xl leading-none italic transition-colors duration-700 ${
-            active ? 'text-lime' : 'text-bone/20'
-          }`}
+          className="font-display text-6xl leading-none font-semibold text-rice/15 transition-colors duration-1000 group-data-[lit=1]:text-vermilion"
         >
           {step.n}
         </span>
         <span className="eyebrow">{step.tag}</span>
       </div>
-      <h3 className="mb-3 text-2xl font-medium tracking-[-0.03em] text-bone sm:text-3xl">{step.title}</h3>
-      <p className="max-w-md leading-relaxed text-bone-2">{step.body}</p>
+      <h3 className="mb-3 font-display text-2xl font-semibold tracking-[-0.02em] text-rice sm:text-3xl">{step.title}</h3>
+      <p className="max-w-md leading-relaxed text-rice-2">{step.body}</p>
     </motion.li>
   )
 }
@@ -75,18 +80,18 @@ export function Steps() {
           <Reveal>
             <p className="eyebrow mb-6">How it works</p>
           </Reveal>
-          <h2 className="text-[clamp(2.5rem,5.5vw,4.5rem)] leading-[0.98] font-medium tracking-[-0.045em]">
+          <h2 className="font-display text-[clamp(2.4rem,5vw,4.2rem)] leading-[1.06] font-semibold tracking-[-0.03em] text-rice">
             <SplitWords
               inView
               segments={[
                 { text: 'From problem set to' },
-                { text: 'done,', className: 'font-serif italic font-normal text-lime' },
+                { text: 'done,', className: 'text-vermilion' },
                 { text: 'one checkpoint at a time.' },
               ]}
             />
           </h2>
-          <div className="mt-12 hidden h-px w-full max-w-sm bg-bone/10 md:block">
-            <motion.div style={{ width: fill }} className="h-px bg-lime" />
+          <div className="mt-12 hidden h-[3px] w-full max-w-sm rounded-full bg-rice/10 md:block">
+            <motion.div style={{ width: fill }} className="h-[3px] rounded-full bg-vermilion" />
           </div>
         </div>
 
