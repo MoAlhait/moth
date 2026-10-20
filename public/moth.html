@@ -66,14 +66,15 @@ code,pre{font-family:var(--mono)}
 
 .app{display:none;flex-direction:column}
 .app.show{display:flex}
-.topbar{height:42px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 10px;gap:12px}
-.left{display:flex;align-items:center;gap:10px;min-width:0}
-.toplogo{display:flex;align-items:center;gap:8px;font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text);cursor:pointer}
+.topbar{flex-shrink:0;min-height:42px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:6px 10px;gap:6px 12px}
+.left{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 140px}
+.toplogo{flex-shrink:0;display:flex;align-items:center;gap:8px;font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text);cursor:pointer}
 .session{font:11px var(--mono);color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.right{display:flex;align-items:center;gap:8px}
+.right{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px 8px;margin-left:auto}
+.sizeCtl{display:flex;align-items:center;gap:6px}
 .sizelbl{font:10px var(--mono);color:var(--text3)}
 #fontSlider{width:72px;accent-color:var(--cyan)}
-.topbtn{height:28px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);padding:0 12px;border-radius:999px;font:11px var(--mono);letter-spacing:.02em;cursor:pointer}
+.topbtn{white-space:nowrap;height:28px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);padding:0 12px;border-radius:999px;font:11px var(--mono);letter-spacing:.02em;cursor:pointer}
 .topbtn:hover{border-color:var(--border3);color:var(--text)}
 .topbtn.copied{background:rgba(200,214,109,.15);border-color:rgba(200,214,109,.45);color:var(--green)}
 .topbtn:disabled{opacity:0.45;cursor:not-allowed}
@@ -90,7 +91,7 @@ code,pre{font-family:var(--mono)}
 }
 .similarOpt:hover{background:var(--bg3); color:var(--text)}
 
-.layout{position:relative;display:grid;grid-template-columns:1fr 4px var(--sw,268px);height:calc(100vh - 42px);min-height:0}
+.layout{position:relative;display:grid;grid-template-columns:1fr 4px var(--sw,268px);flex:1;min-height:0}
 .ecol{min-width:0;min-height:0;display:flex;flex-direction:column;position:relative;z-index:1}
 .tabs{height:36px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:0 10px;gap:14px;overflow:auto}
 .ptab{height:35px;display:flex;align-items:center;padding:0 2px;border-bottom:2px solid transparent;color:var(--text2);font:12px var(--mono);cursor:pointer;white-space:nowrap;background:transparent}
@@ -190,11 +191,11 @@ code,pre{font-family:var(--mono)}
 .handle:hover{background:var(--border3)}
 .cbtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);font:12px var(--mono);cursor:pointer;z-index:5}
 
-.rcol{position:relative;z-index:2;border-left:1px solid var(--border);background:var(--bg1);min-width:0}
-.rtabs{height:34px;display:flex;align-items:center;gap:8px;padding:0 8px;border-bottom:1px solid var(--border);overflow:auto}
-.rtab{font:10px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--text3);cursor:pointer;padding:6px 8px;border-radius:6px;white-space:nowrap;background:transparent}
+.rcol{position:relative;z-index:2;border-left:1px solid var(--border);background:var(--bg1);min-width:0;min-height:0;display:flex;flex-direction:column}
+.rtabs{flex-shrink:0;min-height:34px;display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:4px 6px;border-bottom:1px solid var(--border)}
+.rtab{flex-shrink:0;font:10px var(--mono);text-transform:uppercase;letter-spacing:.03em;color:var(--text3);cursor:pointer;padding:6px;border-radius:6px;white-space:nowrap;background:transparent}
 .rtab.on{background:rgba(200,214,109,.12);color:var(--cyan)}
-.rpanel{position:absolute;inset:34px 0 0 0;padding:16px 18px 22px;overflow:auto;display:none;line-height:1.65}
+.rpanel{position:relative;flex:1;min-height:0;padding:16px 18px 22px;overflow:auto;display:none;line-height:1.65}
 .rpanel.on{display:block}
 .rpanel>h3:first-child{margin-top:2px}
 .rpanel h3{font-size:14px;font-weight:600;color:var(--text);margin:26px 0 14px;line-height:1.4}
@@ -273,6 +274,10 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
 
 .collapsed{grid-template-columns:1fr 4px 0px}
 .collapsed .rcol{display:none}
+@media (max-width:700px){
+  .layout:not(.collapsed){grid-template-columns:1fr 4px min(var(--sw,268px),62vw)}
+  .sizelbl{display:none}
+}
 .newOverlay{
   position:absolute; inset:0; z-index:12; display:none;
   background:rgba(8,10,8,.55);
@@ -352,7 +357,7 @@ h3.synSection{font-size:13px;font-weight:600;color:var(--text);margin:22px 0 10p
   <div class="topbar">
     <div class="left"><span class="toplogo" id="goHome"><span class="dots"><i></i><i></i><i></i></span>moth</span><span class="session" id="sessionName">session</span></div>
     <div class="right">
-      <span class="sizelbl">size</span><input id="fontSlider" type="range" min="10" max="24" step="1" value="23" />
+      <span class="sizeCtl"><span class="sizelbl">size</span><input id="fontSlider" type="range" min="10" max="24" step="1" value="23" /></span>
       <button class="topbtn" id="helperModeBtn" title="Line helper follow vs locked position">line: follow</button>
       <div class="similarWrap">
         <button class="topbtn" id="helperMenuBtn" type="button" title="Helper display">helper: bottom</button>
@@ -2224,6 +2229,8 @@ function bindEvents(){
     el.layout.classList.toggle('collapsed',state.collapsed);
     el.collapse.textContent=state.collapsed?'‹':'›';
   };
+  // phones: start with the side panel tucked away so the editor gets the width
+  if(window.matchMedia('(max-width:700px)').matches) el.collapse.onclick();
 
   applyHelperScope();
   setHelperMode(true);
